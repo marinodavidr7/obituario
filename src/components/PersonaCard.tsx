@@ -8,7 +8,7 @@ export default function PersonaCard({ p }: { p: Persona }) {
     <Link
       href={`/persona/${p.id}`}
       onClick={() => triggerHaptic("light")}
-      className="arch-card flex flex-col items-center text-center px-3.5 py-6 sm:px-6 sm:pt-12 sm:pb-7 min-h-[250px] sm:min-h-[360px] active:scale-[0.97] transition-all"
+      className="arch-card rounded-t-[100px] xs:rounded-t-[120px] sm:rounded-t-[140px] rounded-b-2xl overflow-hidden flex flex-col items-center text-center px-3.5 py-6 sm:px-6 sm:pt-12 sm:pb-7 min-h-[250px] sm:min-h-[360px] active:scale-[0.97] transition-all w-full"
     >
       <div className="portrait-ring relative z-10 w-20 h-20 sm:w-28 sm:h-28 md:w-[132px] md:h-[132px] shrink-0">
         {p.foto ? (

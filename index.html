@@ -24,6 +24,13 @@
       html, body, #root { height: 100%; }
       body { margin: 0; background: #050709; color: #f2efe9; }
       #boot { position: fixed; inset: 0; display: grid; place-items: center; color: #c9a86a; font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; letter-spacing: 0.1em; }
+      .arch-card {
+        border-radius: 9999px 9999px 18px 18px !important;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(201, 168, 106, 0.28);
+        background: radial-gradient(circle at 50% 0%, rgba(201, 168, 106, 0.12) 0%, transparent 45%), linear-gradient(172deg, rgba(32, 38, 48, 0.72) 0%, rgba(17, 21, 28, 0.95) 55%, rgba(9, 12, 16, 0.99) 100%);
+      }
     </style>
     <script>
       if (typeof window !== "undefined") {

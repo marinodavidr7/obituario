@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import type { Dedicatoria } from "@/types";
@@ -26,6 +26,39 @@ export default function Dedicatorias({
   const [exito, setExito] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
+
+  useEffect(() => {
+    setLista(inicial || []);
+  }, [inicial]);
+
+  // Escuchar nuevas dedicatorias o borrados en tiempo real desde Supabase
+  useEffect(() => {
+    const handleRealtimeDedicatoria = (e: Event) => {
+      const custom = e as CustomEvent<{ personaId: string; dedicatoria: Dedicatoria }>;
+      if (custom.detail?.personaId === personaId && custom.detail.dedicatoria) {
+        setLista((prev) => {
+          if (prev.some((d) => String(d.id) === String(custom.detail.dedicatoria.id))) {
+            return prev;
+          }
+          return [custom.detail.dedicatoria, ...prev];
+        });
+      }
+    };
+
+    const handleRealtimeDedicatoriaEliminada = (e: Event) => {
+      const custom = e as CustomEvent<{ id: string | number }>;
+      if (custom.detail?.id != null) {
+        setLista((prev) => prev.filter((d) => String(d.id) !== String(custom.detail.id)));
+      }
+    };
+
+    window.addEventListener("panteon:realtime-dedicatoria", handleRealtimeDedicatoria);
+    window.addEventListener("panteon:realtime-dedicatoria-eliminada", handleRealtimeDedicatoriaEliminada);
+    return () => {
+      window.removeEventListener("panteon:realtime-dedicatoria", handleRealtimeDedicatoria);
+      window.removeEventListener("panteon:realtime-dedicatoria-eliminada", handleRealtimeDedicatoriaEliminada);
+    };
+  }, [personaId]);
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();

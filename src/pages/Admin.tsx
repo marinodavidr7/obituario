@@ -81,6 +81,8 @@ export default function Admin() {
   useEffect(() => {
     if (authed) {
       refreshData();
+      window.addEventListener("panteon:db-updated", refreshData);
+      return () => window.removeEventListener("panteon:db-updated", refreshData);
     }
   }, [authed]);
 

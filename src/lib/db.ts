@@ -10,6 +10,16 @@ import type {
 } from "@/types";
 import { initialDedicatorias, initialFamilias, initialPersonas } from "@/data/seed";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
+import {
+  initRealtime,
+  registerRealtimeDbSyncHandlers,
+  broadcastOfrenda,
+  broadcastDedicatoria,
+  broadcastDedicatoriaEliminada,
+  broadcastPersonaActualizada,
+  broadcastPersonaEliminada,
+  broadcastFamiliaActualizada,
+} from "./realtime";
 
 export type { Dato, Dedicatoria, Familia, Persona, TrackActivoInfo, TrackRotacion, Video };
 
@@ -141,9 +151,72 @@ export async function syncFromSupabase(): Promise<void> {
   }
 }
 
-// Iniciar sincronización de Supabase si está disponible
+// Registrar manejadores para reflejar eventos Realtime de otros usuarios en la memoria local
+registerRealtimeDbSyncHandlers({
+  onOfrenda: (data) => {
+    const p = cachedPersonas.find((x) => x.id === data.personaId);
+    if (p) {
+      p.velas = data.velas;
+      p.flores = data.flores;
+      if (Array.isArray(data.floresTipos)) {
+        p.flores_tipos = data.floresTipos;
+      }
+      saveState();
+    }
+  },
+  onDedicatoria: (data) => {
+    if (!cachedDedicatorias.some((d) => String(d.id) === String(data.dedicatoria.id))) {
+      cachedDedicatorias = [data.dedicatoria, ...cachedDedicatorias];
+      saveState();
+    }
+  },
+  onDedicatoriaEliminada: (data) => {
+    cachedDedicatorias = cachedDedicatorias.filter((d) => String(d.id) !== String(data.id));
+    saveState();
+  },
+  onPersonaActualizada: (persona) => {
+    const idx = cachedPersonas.findIndex((x) => x.id === persona.id);
+    if (idx >= 0) {
+      cachedPersonas[idx] = { ...cachedPersonas[idx], ...persona };
+    } else {
+      cachedPersonas.push(persona);
+    }
+    saveState();
+  },
+  onPersonaEliminada: (id) => {
+    cachedPersonas = cachedPersonas.filter((p) => p.id !== id);
+    cachedDedicatorias = cachedDedicatorias.filter((d) => d.persona_id !== id);
+    saveState();
+  },
+  onFamiliaActualizada: (fam) => {
+    const idx = cachedFamilias.findIndex((f) => f.id === fam.id);
+    if (idx >= 0) {
+      cachedFamilias[idx] = { ...cachedFamilias[idx], ...fam };
+    } else {
+      cachedFamilias.push(fam);
+    }
+    saveState();
+  },
+});
+
+// Iniciar sincronización y conexión en tiempo real si Supabase está disponible
 if (typeof window !== "undefined" && isSupabaseConfigured) {
   syncFromSupabase();
+  initRealtime();
+
+  // Sincronización en segundo plano al recuperar el foco de la pestaña o volver a estar online
+  window.addEventListener("focus", () => syncFromSupabase());
+  window.addEventListener("online", () => {
+    syncFromSupabase();
+    initRealtime();
+  });
+
+  // Polling inteligente cada 25s cuando la pestaña está visible
+  setInterval(() => {
+    if (!document.hidden && navigator.onLine) {
+      syncFromSupabase();
+    }
+  }, 25000);
 }
 
 export function getConfig(clave: string): string | null {
@@ -385,13 +458,16 @@ export function addOfrenda(
   }
   saveState();
 
+  // Enviar a Supabase y emitir broadcast Realtime a todos los usuarios
   if (isSupabaseConfigured) {
     supabase
       .from("personas")
-      .update({ velas: p.velas, flores: p.flores })
+      .update({ velas: p.velas, flores: p.flores, flores_tipos: p.flores_tipos })
       .eq("id", personaId)
       .then();
   }
+
+  broadcastOfrenda(personaId, p.velas, p.flores, p.flores_tipos, tipo, florTipo);
 
   return { velas: p.velas || 0, flores: p.flores || 0, flores_tipos: p.flores_tipos };
 }
@@ -417,6 +493,8 @@ export function addDedicatoria(personaId: string, autor: string, texto: string):
   if (isSupabaseConfigured) {
     supabase.from("dedicatorias").insert([nueva]).then();
   }
+
+  broadcastDedicatoria(personaId, nueva);
 
   return nueva;
 }
@@ -484,6 +562,7 @@ export function insertPersona(p: Omit<Persona, "visitas" | "velas" | "flores">):
 
   cachedPersonas.push(nueva);
   saveState();
+  broadcastPersonaActualizada(nueva);
 
   if (isSupabaseConfigured) {
     supabase.from("personas").insert([nueva]).then(({ error }) => {
@@ -527,6 +606,7 @@ export function updatePersona(p: Omit<Persona, "visitas" | "velas" | "flores">):
       videos: p.videos !== undefined ? p.videos : (actual.videos || []),
     };
     saveState();
+    broadcastPersonaActualizada(cachedPersonas[idx]);
 
     if (isSupabaseConfigured) {
       supabase.from("personas").upsert(cachedPersonas[idx]).then(({ error }) => {
@@ -565,6 +645,7 @@ export async function deletePersona(id: string): Promise<{ success: boolean; err
     }
   }
   saveState();
+  broadcastPersonaEliminada(id);
 
   if (isSupabaseConfigured) {
     try {
@@ -616,6 +697,7 @@ export async function deleteFamilia(id: string): Promise<{ success: boolean; err
 export async function deleteDedicatoria(id: string | number): Promise<{ success: boolean; error?: string }> {
   cachedDedicatorias = cachedDedicatorias.filter((x) => String(x.id) !== String(id));
   saveState();
+  broadcastDedicatoriaEliminada(id);
 
   if (isSupabaseConfigured) {
     try {

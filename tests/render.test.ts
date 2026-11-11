@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import React from "react";
 import { renderToString } from "react-dom/server";
 import PersonaView from "../src/pages/PersonaView";
+import FamiliaView from "../src/pages/FamiliaView";
 import App from "../src/App";
 import { listPersonas } from "../src/lib/db";
 
@@ -31,5 +32,11 @@ describe("PersonaView & App Rendering", () => {
       const html = renderToString(React.createElement(App));
       expect(html).toContain("OBITUARIO");
     }).not.toThrow();
+  });
+
+  it("renders FamiliaView with centered header and cards", () => {
+    const html = renderToString(React.createElement(FamiliaView, { id: "garcia" }));
+    expect(html).toContain("Volver al obituario");
+    expect(html).toContain("García");
   });
 });

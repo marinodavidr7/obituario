@@ -55,6 +55,42 @@ export default function Altar({
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Escuchar ofrendas en tiempo real emitidas por otros usuarios
+  useEffect(() => {
+    const handleRealtimeOfrenda = (e: Event) => {
+      const custom = e as CustomEvent<{
+        personaId: string;
+        velas: number;
+        flores: number;
+        floresTipos?: string[];
+        tipo?: "vela" | "flor";
+        florNombre?: string;
+      }>;
+      if (custom.detail?.personaId === personaId) {
+        setVelas(custom.detail.velas);
+        setFlores(custom.detail.flores);
+        if (Array.isArray(custom.detail.floresTipos)) {
+          setFloresTipos(custom.detail.floresTipos);
+        }
+        setGlow(true);
+        setTimeout(() => setGlow(false), 1200);
+        if (custom.detail.tipo === "vela") {
+          setMsg("Alguien acaba de encender una vela en su memoria.");
+        } else if (custom.detail.tipo === "flor") {
+          setMsg(
+            custom.detail.florNombre
+              ? `Alguien acaba de depositar «${custom.detail.florNombre}» en su memoria.`
+              : "Alguien acaba de depositar flores en su memoria."
+          );
+        }
+        setTimeout(() => setMsg(""), 3500);
+      }
+    };
+
+    window.addEventListener("panteon:realtime-ofrenda", handleRealtimeOfrenda);
+    return () => window.removeEventListener("panteon:realtime-ofrenda", handleRealtimeOfrenda);
+  }, [personaId]);
+
   // Bloqueo de scroll y gestión de capas mientras el modal esté abierto
   useEffect(() => {
     if (showFlorModal) {

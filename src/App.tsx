@@ -44,6 +44,11 @@ export default function App() {
     return () => window.removeEventListener("panteon:db-updated", updateGeneralMusic);
   }, []);
 
+  // Garantizar que al navegar entre secciones la vista siempre se monte desde arriba
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [route.name, "id" in route ? route.id : ""]);
+
   let viewContent = <NotFound />;
 
   switch (route.name) {
