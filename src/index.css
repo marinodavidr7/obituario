@@ -1,0 +1,972 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: "Cormorant Garamond", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  --color-gold: var(--theme-gold, #c9a86a);
+  --color-gold-soft: var(--theme-gold-soft, #e8d5a9);
+  --color-gold-dark: var(--theme-gold-dark, #8f723c);
+
+  --color-stone-950: var(--theme-stone-950, #06080a);
+  --color-stone-900: var(--theme-stone-900, #0b0e12);
+  --color-stone-850: var(--theme-stone-850, #12161c);
+  --color-stone-800: var(--theme-stone-800, #1b2028);
+}
+
+:root {
+  --theme-gold: #c9a86a;
+  --theme-gold-soft: #e8d5a9;
+  --theme-gold-dark: #8f723c;
+  --theme-stone-950: #06080a;
+  --theme-stone-900: #0b0e12;
+  --theme-stone-850: #12161c;
+  --theme-stone-800: #1b2028;
+
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #1c2430 0%, #0b0e13 48%, #050709 100%);
+  --theme-text: #e8e5df;
+  --theme-border: rgba(201, 168, 106, 0.24);
+
+  --gold: var(--theme-gold);
+  --gold-soft: var(--theme-gold-soft);
+  --line: var(--theme-border);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* 1. TEMA POR DEFECTO: Oro Sagrado y Piedra Oscura */
+[data-theme="default"], :root:not([data-theme]) {
+  --theme-gold: #c9a86a;
+  --theme-gold-soft: #e8d5a9;
+  --theme-gold-dark: #8f723c;
+  --theme-stone-950: #06080a;
+  --theme-stone-900: #0b0e12;
+  --theme-stone-850: #12161c;
+  --theme-stone-800: #1b2028;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #1c2430 0%, #0b0e13 48%, #050709 100%);
+  --theme-text: #e8e5df;
+  --theme-border: rgba(201, 168, 106, 0.24);
+}
+
+/* 2. TEMA AZUL CIELO: Celeste Cósmico y Sereno */
+[data-theme="azul-cielo"] {
+  --theme-gold: #38bdf8;
+  --theme-gold-soft: #bae6fd;
+  --theme-gold-dark: #0284c7;
+  --theme-stone-950: #040812;
+  --theme-stone-900: #081324;
+  --theme-stone-850: #0e1e36;
+  --theme-stone-800: #162a4a;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #0c2f54 0%, #061426 50%, #02070f 100%);
+  --theme-text: #e0f2fe;
+  --theme-border: rgba(56, 189, 248, 0.3);
+}
+
+/* 3. TEMA ROJO: Carmesí Sagrado y Devoción */
+[data-theme="rojo"] {
+  --theme-gold: #f43f5e;
+  --theme-gold-soft: #fecdd3;
+  --theme-gold-dark: #be123c;
+  --theme-stone-950: #0d0305;
+  --theme-stone-900: #17060a;
+  --theme-stone-850: #240b12;
+  --theme-stone-800: #33121b;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #3a0d16 0%, #170508 50%, #080203 100%);
+  --theme-text: #ffe4e6;
+  --theme-border: rgba(244, 63, 94, 0.32);
+}
+
+/* 4. TEMA BLANCO: Mármol Celestial Claro */
+[data-theme="blanco"] {
+  --theme-gold: #b38a3c;
+  --theme-gold-soft: #634a17;
+  --theme-gold-dark: #4a3710;
+  --theme-stone-950: #f8fafc;
+  --theme-stone-900: #ffffff;
+  --theme-stone-850: #f1f5f9;
+  --theme-stone-800: #e2e8f0;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #ffffff 0%, #f1f5f9 60%, #e2e8f0 100%);
+  --theme-text: #0f172a;
+  --theme-border: rgba(179, 138, 60, 0.35);
+}
+
+/* 5. TEMA ROSADO: Ternura y Memoria Dulce */
+[data-theme="rosado"] {
+  --theme-gold: #f472b6;
+  --theme-gold-soft: #fbcfe8;
+  --theme-gold-dark: #db2777;
+  --theme-stone-950: #0e0409;
+  --theme-stone-900: #1a0712;
+  --theme-stone-850: #290a1c;
+  --theme-stone-800: #3b1129;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #3e0e29 0%, #1a0712 50%, #090206 100%);
+  --theme-text: #fdf2f8;
+  --theme-border: rgba(244, 114, 182, 0.32);
+}
+
+/* 6. TEMA AMARILLO: Luz Solar y Resplandor */
+[data-theme="amarillo"] {
+  --theme-gold: #eab308;
+  --theme-gold-soft: #fef08a;
+  --theme-gold-dark: #ca8a04;
+  --theme-stone-950: #0b0902;
+  --theme-stone-900: #171305;
+  --theme-stone-850: #231c07;
+  --theme-stone-800: #342a0b;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #3b300c 0%, #171305 50%, #070601 100%);
+  --theme-text: #fefce8;
+  --theme-border: rgba(234, 179, 8, 0.32);
+}
+
+/* 7. TEMA MORADO: Púrpura Sacramental Solemne */
+[data-theme="morado"] {
+  --theme-gold: #a855f7;
+  --theme-gold-soft: #e9d5ff;
+  --theme-gold-dark: #7e22ce;
+  --theme-stone-950: #08030e;
+  --theme-stone-900: #12071f;
+  --theme-stone-850: #1e0a33;
+  --theme-stone-800: #2b1148;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #320f54 0%, #12071f 50%, #06020c 100%);
+  --theme-text: #faf5ff;
+  --theme-border: rgba(168, 85, 247, 0.32);
+}
+
+/* 8. TEMA VERDE: Esperanza y Vida Eterna */
+[data-theme="verde"] {
+  --theme-gold: #10b981;
+  --theme-gold-soft: #a7f3d0;
+  --theme-gold-dark: #047857;
+  --theme-stone-950: #020c07;
+  --theme-stone-900: #06170e;
+  --theme-stone-850: #092316;
+  --theme-stone-800: #0f3521;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, #0a3821 0%, #06170e 50%, #020704 100%);
+  --theme-text: #ecfdf5;
+  --theme-border: rgba(16, 185, 129, 0.32);
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--theme-bg);
+  background-attachment: fixed;
+  color: var(--theme-text);
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  touch-action: manipulation;
+  transition: background 300ms ease, color 300ms ease;
+}
+
+/* Prevenir selección accidental de texto en elementos interactivos */
+button, nav, .arch-card, .tribute-btn, [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+/* Evitar zoom automático intrusivo en Safari iOS al enfocar campos y desactivar redimensionador nativo */
+textarea {
+  resize: none;
+}
+
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+body.no-scroll { overflow: hidden; }
+
+/* Textura sutil de piedra / grano */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.038;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Estrellas y Luciérnagas ligeras optimizadas para GPU */
+.stars { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; contain: strict; }
+.stars i {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  will-change: opacity, transform;
+  animation: twinkle 8s ease-in-out infinite;
+}
+.stars b {
+  position: absolute;
+  background: radial-gradient(circle, #ffe4a0 0%, rgba(201,168,106,0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+  animation: floatUp 18s linear infinite;
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.8); }
+  50% { opacity: 0.85; transform: scale(1.2); }
+}
+
+@keyframes floatUp {
+  0% { transform: translateY(105vh) translateX(0) scale(0.5); opacity: 0; }
+  20% { opacity: 0.55; }
+  80% { opacity: 0.55; }
+  100% { transform: translateY(-10vh) translateX(40px) scale(1.1); opacity: 0; }
+}
+
+/* Llama de la vela animada */
+.llama {
+  width: 20px;
+  height: 28px;
+  transform-origin: 50% 100%;
+  animation: flicker 3.2s ease-in-out infinite;
+}
+@keyframes flicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); opacity: 0.95; }
+  25% { transform: scale(0.94, 0.97) rotate(1.5deg); opacity: 0.86; }
+  50% { transform: scale(1.05, 1.04) rotate(-0.8deg); opacity: 1; }
+  75% { transform: scale(0.97, 1) rotate(1deg); opacity: 0.9; }
+}
+
+@keyframes soundBar {
+  0%, 100% { height: 25%; }
+  50% { height: 100%; }
+}
+
+/* Tarjetas Arqueadas (Mausoleos y Lápidas) */
+.arch-card {
+  background: radial-gradient(circle at 50% 0%, rgba(201, 168, 106, 0.12) 0%, transparent 45%),
+              linear-gradient(172deg, rgba(32, 38, 48, 0.72) 0%, rgba(17, 21, 28, 0.95) 55%, rgba(9, 12, 16, 0.99) 100%);
+  border: 1px solid rgba(201, 168, 106, 0.28);
+  border-radius: 9999px 9999px 18px 18px;
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.14),
+    inset 0 0 20px rgba(201, 168, 106, 0.05),
+    inset 0 -35px 65px rgba(0, 0, 0, 0.8),
+    0 20px 45px rgba(0, 0, 0, 0.65);
+  transition: transform 260ms var(--ease-out), border-color 260ms var(--ease-out), box-shadow 260ms var(--ease-out);
+  position: relative;
+  overflow: hidden;
+}
+
+.arch-card:active {
+  transform: scale(0.98);
+  transition-duration: 100ms;
+}
+
+.arch-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 215, 130, 0.25), transparent 70%);
+  opacity: 0;
+  transition: opacity 280ms var(--ease-out);
+  pointer-events: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .arch-card:hover, .arch-card:focus-visible {
+    transform: translateY(-8px);
+    border-color: rgba(201, 168, 106, 0.75);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.2),
+      inset 0 0 25px rgba(201, 168, 106, 0.12),
+      inset 0 -35px 65px rgba(0, 0, 0, 0.8),
+      0 28px 65px rgba(0, 0, 0, 0.85),
+      0 0 45px rgba(201, 168, 106, 0.22);
+    outline: none;
+  }
+
+  .arch-card:hover::before, .arch-card:focus-visible::before {
+    opacity: 1;
+  }
+}
+
+/* Respuesta táctil inmediata */
+.tribute-btn {
+  transition: transform 140ms var(--ease-out), background-color 180ms var(--ease-out), border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out);
+}
+.tribute-btn:active {
+  transform: scale(0.96);
+  transition-duration: 90ms;
+}
+
+/* Altar de Piedra y Repisa de Ofrendas */
+.altar-sanctuary {
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 168, 60, 0.12), transparent 65%),
+    linear-gradient(180deg, rgba(16, 20, 26, 0.92) 0%, rgba(9, 11, 15, 0.98) 100%);
+  border: 1px solid rgba(201, 168, 106, 0.28);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -24px 48px rgba(0, 0, 0, 0.85),
+    0 20px 50px rgba(0, 0, 0, 0.65);
+  overflow: hidden;
+}
+
+/* Repisa de mármol oscuro donde descansan las velas y flores */
+.altar-ledge {
+  position: relative;
+  min-height: 158px;
+  padding: 28px 18px 18px;
+  background:
+    radial-gradient(ellipse at 50% 92%, rgba(255, 165, 55, 0.16), transparent 70%),
+    linear-gradient(180deg, rgba(12, 15, 20, 0.4) 0%, rgba(22, 26, 33, 0.95) 84%, #1e232b 85%, #0d1014 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(201, 168, 106, 0.35);
+  box-shadow: inset 0 -10px 22px rgba(0, 0, 0, 0.75);
+}
+
+.altar-ledge::after {
+  content: '';
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 14px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(201, 168, 106, 0.45), transparent);
+  pointer-events: none;
+}
+
+/* Vela realista en el altar */
+.real-candle {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+}
+
+.real-candle__halo {
+  position: absolute;
+  top: -18px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 190, 80, 0.52) 0%, rgba(255, 125, 20, 0.18) 48%, rgba(255, 120, 0, 0) 74%);
+  pointer-events: none;
+  animation: haloBreathe 3.4s ease-in-out infinite;
+}
+
+.real-candle__flame {
+  position: relative;
+  z-index: 2;
+  width: 14px;
+  height: 24px;
+  margin-bottom: -3px;
+  transform-origin: 50% 100%;
+  animation: realFlameFlicker 2.9s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(255, 165, 45, 0.85));
+}
+
+@keyframes realFlameFlicker {
+  0%, 100% { transform: scale(1, 1) rotate(-1.2deg); opacity: 0.96; }
+  25% { transform: scale(0.95, 1.04) rotate(1.4deg); opacity: 0.9; }
+  50% { transform: scale(1.04, 0.97) rotate(-0.8deg); opacity: 1; }
+  75% { transform: scale(0.97, 1.03) rotate(1deg); opacity: 0.93; }
+}
+
+@keyframes haloBreathe {
+  0%, 100% { transform: scale(0.94); opacity: 0.72; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
+/* Arreglo floral realista en el altar */
+.real-bouquet {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  transform-origin: 50% 100%;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.65));
+}
+
+/* Destello cálido del santuario cuando se prende una vela */
+.sanctuary-ignite-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 60%, rgba(255, 185, 70, 0.34), rgba(255, 130, 30, 0.08) 55%, transparent 75%);
+  opacity: 0;
+  transition: opacity 450ms var(--ease-out);
+}
+.sanctuary-ignite-glow.active {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .real-candle__flame,
+  .real-candle__halo,
+  .llama,
+  .stars i,
+  .stars b {
+    animation: none !important;
+  }
+  .arch-card,
+  .tribute-btn {
+    transition: opacity 200ms ease !important;
+    transform: none !important;
+  }
+  .fade-enter, .arch-card, .pop-anim, #modal *, #modal-crear *, #video-modal *, #lightbox {
+    animation-name: none !important;
+  }
+  button:active { transform: none !important; }
+}
+
+/* Entrada escalonada de tarjetas */
+.arch-card { animation: cardIn 480ms var(--ease-out) backwards; }
+#grid-familias > :nth-child(1), #grid-lapidas > :nth-child(1), #grid-todos > :nth-child(1) { animation-delay: 0ms; }
+#grid-familias > :nth-child(2), #grid-lapidas > :nth-child(2), #grid-todos > :nth-child(2) { animation-delay: 60ms; }
+#grid-familias > :nth-child(3), #grid-lapidas > :nth-child(3), #grid-todos > :nth-child(3) { animation-delay: 120ms; }
+#grid-familias > :nth-child(4), #grid-lapidas > :nth-child(4), #grid-todos > :nth-child(4) { animation-delay: 180ms; }
+#grid-familias > :nth-child(n+5), #grid-lapidas > :nth-child(n+5), #grid-todos > :nth-child(n+5) { animation-delay: 240ms; }
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); filter: blur(3px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+:focus-visible { outline: 2px solid rgba(232, 213, 169, 0.7); outline-offset: 3px; }
+.arch-card:focus-visible { outline: 2px solid rgba(232, 213, 169, 0.7); }
+
+button { transition-timing-function: var(--ease-out); }
+button:not(.arch-card):active { transform: scale(0.97); transition-duration: 100ms; }
+
+input, select, textarea { transition: border-color 180ms var(--ease-out), box-shadow 180ms var(--ease-out), background-color 180ms var(--ease-out); }
+input:focus, select:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(201, 168, 106, 0.14); outline: none; }
+
+/* Entrada de modales */
+#modal:not(.hidden) > div:last-child,
+#modal-crear:not(.hidden) > div:last-child,
+#video-modal:not(.hidden) > #video-modal-box { animation: modalIn 260ms var(--ease-out) backwards; }
+#modal:not(.hidden) > div:first-child,
+#modal-crear:not(.hidden) > div:first-child,
+#lightbox:not(.hidden), #video-modal:not(.hidden) { animation: backdropIn 200ms ease-out backwards; }
+@keyframes modalIn { from { opacity: 0; transform: translateY(12px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Marco de retrato en lápida */
+.portrait-ring {
+  border-radius: 50%;
+  padding: 3.5px;
+  background: linear-gradient(145deg, rgba(201, 168, 106, 0.9), rgba(201, 168, 106, 0.15) 48%, rgba(201, 168, 106, 0.7));
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.6), 0 14px 32px rgba(0, 0, 0, 0.65);
+}
+
+.portrait-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(165deg, #28303a, #101419);
+  filter: grayscale(0.35) contrast(1.06) brightness(0.95);
+  transition: filter 0.5s ease, transform 0.5s ease;
+}
+
+.arch-card:hover .portrait-inner {
+  filter: grayscale(0) contrast(1.04) brightness(1.02);
+}
+
+/* Animación suave de entrada de vistas */
+.fade-enter {
+  animation: fadeInView 380ms var(--ease-out) backwards;
+}
+@keyframes fadeInView {
+  from { opacity: 0; transform: translateY(10px); filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: blur(0); }
+}
+
+/* Título con brillo dinámico según el tema activo */
+h1.font-serif, h2#familia-titulo {
+  background: linear-gradient(180deg, #fbf8f0 0%, var(--gold-soft) 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 28px var(--line));
+}
+
+[data-theme="azul-cielo"] h1.font-serif,
+[data-theme="azul-cielo"] h2#familia-titulo {
+  background: linear-gradient(180deg, #f0f9ff 0%, #38bdf8 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 28px rgba(56, 189, 248, 0.4));
+}
+[data-theme="azul-cielo"] .stars b {
+  background: radial-gradient(circle, #7dd3fc 0%, rgba(56, 189, 248, 0) 70%);
+}
+
+[data-theme="rojo"] h1.font-serif,
+[data-theme="rojo"] h2#familia-titulo {
+  background: linear-gradient(180deg, #fff1f2 0%, #fb7185 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 28px rgba(244, 63, 94, 0.4));
+}
+[data-theme="rojo"] .stars b {
+  background: radial-gradient(circle, #fda4af 0%, rgba(244, 63, 94, 0) 70%);
+}
+
+[data-theme="rosado"] h1.font-serif,
+[data-theme="rosado"] h2#familia-titulo {
+  background: linear-gradient(180deg, #fdf2f8 0%, #f472b6 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 28px rgba(244, 114, 182, 0.4));
+}
+[data-theme="rosado"] .stars b {
+  background: radial-gradient(circle, #fbcfe8 0%, rgba(244, 114, 182, 0) 70%);
+}
+
+[data-theme="amarillo"] h1.font-serif,
+[data-theme="amarillo"] h2#familia-titulo {
+  background: linear-gradient(180deg, #fefce8 0%, #eab308 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 28px rgba(234, 179, 8, 0.4));
+}
+[data-theme="amarillo"] .stars b {
+  background: radial-gradient(circle, #fef08a 0%, rgba(234, 179, 8, 0) 70%);
+}
+
+[data-theme="morado"] h1.font-serif,
+[data-theme="morado"] h2#familia-titulo {
+  background: linear-gradient(180deg, #faf5ff 0%, #a855f7 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 28px rgba(168, 85, 247, 0.4));
+}
+[data-theme="morado"] .stars b {
+  background: radial-gradient(circle, #e9d5ff 0%, rgba(168, 85, 247, 0) 70%);
+}
+
+[data-theme="verde"] h1.font-serif,
+[data-theme="verde"] h2#familia-titulo {
+  background: linear-gradient(180deg, #ecfdf5 0%, #10b981 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 28px rgba(16, 185, 129, 0.4));
+}
+[data-theme="verde"] .stars b {
+  background: radial-gradient(circle, #a7f3d0 0%, rgba(16, 185, 129, 0) 70%);
+}
+
+/* Ajustes completos para Tema Blanco */
+[data-theme="blanco"] h1.font-serif,
+[data-theme="blanco"] h2#familia-titulo {
+  background: linear-gradient(180deg, #0f172a 0%, #b38a3c 120%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 10px rgba(179, 138, 60, 0.25));
+}
+[data-theme="blanco"] .text-stone-100,
+[data-theme="blanco"] .text-stone-200,
+[data-theme="blanco"] .text-stone-300,
+[data-theme="blanco"] .text-\[\#f2efe9\],
+[data-theme="blanco"] .text-\[\#f4f1eb\],
+[data-theme="blanco"] .text-\[\#f5f2eb\],
+[data-theme="blanco"] .text-\[\#e8e5df\] {
+  color: #0f172a !important;
+}
+[data-theme="blanco"] .text-stone-400,
+[data-theme="blanco"] .text-stone-500 {
+  color: #475569 !important;
+}
+[data-theme="blanco"] nav {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: rgba(179, 138, 60, 0.25) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+}
+[data-theme="blanco"] .bg-stone-950,
+[data-theme="blanco"] .bg-stone-900,
+[data-theme="blanco"] .bg-stone-850,
+[data-theme="blanco"] .bg-\[\#090c10\],
+[data-theme="blanco"] .bg-\[\#06080a\],
+[data-theme="blanco"] .bg-\[\#050709\] {
+  background-color: #ffffff !important;
+}
+[data-theme="blanco"] .bg-stone-900\/60,
+[data-theme="blanco"] .bg-stone-900\/80,
+[data-theme="blanco"] .bg-stone-900\/50,
+[data-theme="blanco"] .bg-stone-950\/80,
+[data-theme="blanco"] .bg-stone-950\/60,
+[data-theme="blanco"] .bg-stone-950\/50,
+[data-theme="blanco"] .bg-stone-950\/95,
+[data-theme="blanco"] .bg-\[\#0e1217\],
+[data-theme="blanco"] .bg-\[\#0e1218\] {
+  background-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+[data-theme="blanco"] .border-white\/10,
+[data-theme="blanco"] .border-white\/5,
+[data-theme="blanco"] .border-white\/15,
+[data-theme="blanco"] .border-white\/20 {
+  border-color: rgba(203, 213, 225, 0.7) !important;
+}
+[data-theme="blanco"] input,
+[data-theme="blanco"] select,
+[data-theme="blanco"] textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+[data-theme="blanco"] input::placeholder,
+[data-theme="blanco"] textarea::placeholder {
+  color: #94a3b8 !important;
+}
+[data-theme="blanco"] .stars {
+  opacity: 0.15;
+}
+
+/* ==========================================================================
+   MODO DE ALTO CONTRASTE (ACCESIBILIDAD PARA PERSONAS CON DISCAPACIDAD VISUAL)
+   Garantiza contraste superior a WCAG AAA (>= 7:1) con fondo negro absoluto,
+   texto blanco nítido, bordes reforzados y supresión de elementos distractores.
+   ========================================================================== */
+[data-high-contrast="true"],
+.high-contrast,
+html[data-high-contrast="true"],
+html.high-contrast {
+  --theme-bg: #000000;
+  --theme-text: #ffffff;
+  --theme-gold: #ffd700;
+  --theme-gold-soft: #fef08a;
+  --theme-gold-dark: #eab308;
+  --theme-border: #ffd700;
+  --theme-stone-950: #000000;
+  --theme-stone-900: #0a0a0a;
+  --theme-stone-850: #121212;
+  --theme-stone-800: #1c1c1c;
+  --gold: #ffd700;
+  --gold-soft: #fef08a;
+  --line: #ffd700;
+  color-scheme: dark;
+}
+
+[data-high-contrast="true"] body,
+.high-contrast body,
+body[data-high-contrast="true"],
+body.high-contrast {
+  background: #000000 !important;
+  color: #ffffff !important;
+  font-weight: 450 !important;
+  letter-spacing: 0.012em;
+}
+
+/* Ocultar texturas de grano y partículas flotantes para evitar fatiga visual */
+[data-high-contrast="true"] body::after,
+.high-contrast body::after,
+[data-high-contrast="true"] .stars,
+.high-contrast .stars {
+  display: none !important;
+}
+
+/* Títulos principales: contraste máximo sin degradados tenues ni recortes */
+[data-high-contrast="true"] h1,
+.high-contrast h1,
+[data-high-contrast="true"] h2,
+.high-contrast h2,
+[data-high-contrast="true"] h3,
+.high-contrast h3,
+[data-high-contrast="true"] h1.font-serif,
+.high-contrast h1.font-serif,
+[data-high-contrast="true"] h2#familia-titulo,
+.high-contrast h2#familia-titulo {
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  -webkit-text-fill-color: initial !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  filter: none !important;
+  text-shadow: 0 1px 2px #000000;
+}
+
+/* Realce dorado en epígrafes o acentos */
+[data-high-contrast="true"] .text-gold,
+.high-contrast .text-gold,
+[data-high-contrast="true"] .text-gold-soft,
+.high-contrast .text-gold-soft,
+[data-high-contrast="true"] .text-gold-soft\/90,
+.high-contrast .text-gold-soft\/90 {
+  color: #fde047 !important;
+  font-weight: 600 !important;
+}
+
+/* Todo texto atenuado o secundario se eleva a alto contraste legible */
+[data-high-contrast="true"] .text-stone-200,
+.high-contrast .text-stone-200,
+[data-high-contrast="true"] .text-stone-300,
+.high-contrast .text-stone-300,
+[data-high-contrast="true"] .text-stone-400,
+.high-contrast .text-stone-400,
+[data-high-contrast="true"] .text-stone-500,
+.high-contrast .text-stone-500,
+[data-high-contrast="true"] .text-stone-600,
+.high-contrast .text-stone-600,
+[data-high-contrast="true"] .text-white\/40,
+.high-contrast .text-white\/40,
+[data-high-contrast="true"] .text-white\/50,
+.high-contrast .text-white\/50,
+[data-high-contrast="true"] .text-white\/60,
+.high-contrast .text-white\/60,
+[data-high-contrast="true"] .text-white\/70,
+.high-contrast .text-white\/70,
+[data-high-contrast="true"] .text-white\/80,
+.high-contrast .text-white\/80,
+[data-high-contrast="true"] .text-amber-200\/80,
+.high-contrast .text-amber-200\/80,
+[data-high-contrast="true"] .text-\[\#f2efe9\],
+.high-contrast .text-\[\#f2efe9\],
+[data-high-contrast="true"] .text-\[\#f4f1eb\],
+.high-contrast .text-\[\#f4f1eb\],
+[data-high-contrast="true"] .text-\[\#f5f2eb\],
+.high-contrast .text-\[\#f5f2eb\],
+[data-high-contrast="true"] .text-\[\#e8e5df\],
+.high-contrast .text-\[\#e8e5df\] {
+  color: #f1f5f9 !important;
+}
+
+/* Superficies, tarjetas y mausoleos: fondo negro sólido con borde nítido de 2px */
+[data-high-contrast="true"] .arch-card,
+.high-contrast .arch-card {
+  background: #050505 !important;
+  border: 2px solid #fde047 !important;
+  box-shadow: 0 0 0 1px #000000, 0 12px 30px rgba(0, 0, 0, 0.95) !important;
+}
+
+[data-high-contrast="true"] .arch-card:hover,
+.high-contrast .arch-card:hover,
+[data-high-contrast="true"] .arch-card:focus-visible,
+.high-contrast .arch-card:focus-visible {
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 3px #fde047, 0 16px 40px rgba(0, 0, 0, 1) !important;
+}
+
+/* Altar y repisas en alto contraste */
+[data-high-contrast="true"] .altar-sanctuary,
+.high-contrast .altar-sanctuary {
+  background: #000000 !important;
+  border: 2px solid #fde047 !important;
+}
+
+[data-high-contrast="true"] .altar-ledge,
+.high-contrast .altar-ledge {
+  background: #0c0c0c !important;
+  border-top: 2px solid #fde047 !important;
+  border-bottom: 2px solid #fde047 !important;
+}
+
+/* Navegación y barras fijas */
+[data-high-contrast="true"] nav,
+.high-contrast nav {
+  background-color: #000000 !important;
+  border-bottom: 2px solid #fde047 !important;
+}
+
+/* Fondos oscuros translúcidos se convierten en negro opaco de alto contraste */
+[data-high-contrast="true"] .bg-stone-950,
+.high-contrast .bg-stone-950,
+[data-high-contrast="true"] .bg-stone-900,
+.high-contrast .bg-stone-900,
+[data-high-contrast="true"] .bg-stone-850,
+.high-contrast .bg-stone-850,
+[data-high-contrast="true"] .bg-stone-800,
+.high-contrast .bg-stone-800,
+[data-high-contrast="true"] .bg-stone-900\/40,
+.high-contrast .bg-stone-900\/40,
+[data-high-contrast="true"] .bg-stone-900\/50,
+.high-contrast .bg-stone-900\/50,
+[data-high-contrast="true"] .bg-stone-900\/60,
+.high-contrast .bg-stone-900\/60,
+[data-high-contrast="true"] .bg-stone-900\/70,
+.high-contrast .bg-stone-900\/70,
+[data-high-contrast="true"] .bg-stone-900\/80,
+.high-contrast .bg-stone-900\/80,
+[data-high-contrast="true"] .bg-stone-950\/60,
+.high-contrast .bg-stone-950\/60,
+[data-high-contrast="true"] .bg-stone-950\/80,
+.high-contrast .bg-stone-950\/80,
+[data-high-contrast="true"] .bg-stone-950\/90,
+.high-contrast .bg-stone-950\/90,
+[data-high-contrast="true"] .bg-stone-950\/95,
+.high-contrast .bg-stone-950\/95,
+[data-high-contrast="true"] .bg-\[\#0a0d13\]\/95,
+.high-contrast .bg-\[\#0a0d13\]\/95,
+[data-high-contrast="true"] .bg-\[\#0e1218\]\/95,
+.high-contrast .bg-\[\#0e1218\]\/95 {
+  background-color: #080808 !important;
+}
+
+/* Bordes: reforzados con oro de alto contraste visible */
+[data-high-contrast="true"] .border-white\/10,
+.high-contrast .border-white\/10,
+[data-high-contrast="true"] .border-white\/15,
+.high-contrast .border-white\/15,
+[data-high-contrast="true"] .border-white\/20,
+.high-contrast .border-white\/20,
+[data-high-contrast="true"] .border-gold\/15,
+.high-contrast .border-gold\/15,
+[data-high-contrast="true"] .border-gold\/20,
+.high-contrast .border-gold\/20,
+[data-high-contrast="true"] .border-gold\/30,
+.high-contrast .border-gold\/30,
+[data-high-contrast="true"] .border-gold\/40,
+.high-contrast .border-gold\/40,
+[data-high-contrast="true"] .border-gold\/50,
+.high-contrast .border-gold\/50 {
+  border-color: rgba(253, 224, 71, 0.7) !important;
+}
+
+/* Controles de formulario: Inputs, selects, textareas */
+[data-high-contrast="true"] input,
+.high-contrast input,
+[data-high-contrast="true"] select,
+.high-contrast select,
+[data-high-contrast="true"] textarea,
+.high-contrast textarea {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border: 2px solid #fde047 !important;
+  font-weight: 500 !important;
+}
+
+[data-high-contrast="true"] input:focus,
+.high-contrast input:focus,
+[data-high-contrast="true"] select:focus,
+.high-contrast select:focus,
+[data-high-contrast="true"] textarea:focus,
+.high-contrast textarea:focus {
+  outline: 3px solid #ffffff !important;
+  outline-offset: 2px !important;
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 3px #fde047 !important;
+}
+
+[data-high-contrast="true"] input::placeholder,
+.high-contrast input::placeholder,
+[data-high-contrast="true"] textarea::placeholder,
+.high-contrast textarea::placeholder {
+  color: #cbd5e1 !important;
+}
+
+/* Foco de accesibilidad nítido */
+[data-high-contrast="true"] :focus-visible,
+.high-contrast :focus-visible {
+  outline: 3px solid #fde047 !important;
+  outline-offset: 3px !important;
+}
+
+/* Enlaces con subrayado visible para no depender únicamente del color */
+[data-high-contrast="true"] a:hover,
+.high-contrast a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Modales y cuadros de diálogo en alto contraste */
+[data-high-contrast="true"] #modal > div:last-child,
+.high-contrast #modal > div:last-child,
+[data-high-contrast="true"] #modal-crear > div:last-child,
+.high-contrast #modal-crear > div:last-child {
+  background-color: #000000 !important;
+  border: 2px solid #fde047 !important;
+  box-shadow: 0 0 0 4px #000000, 0 16px 40px rgba(0, 0, 0, 1) !important;
+}
+
+
+
+::-webkit-scrollbar { width: 9px; }
+::-webkit-scrollbar-track { background: #080b0e; }
+::-webkit-scrollbar-thumb { background: #262d36; border-radius: 8px; border: 2px solid #080b0e; }
+::-webkit-scrollbar-thumb:hover { background: #38424f; }
+
+@keyframes popScale {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.22); }
+  100% { transform: scale(1); }
+}
+.pop-anim { animation: popScale 300ms var(--ease-out); }
+
+.floating-tribute {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999;
+  font-size: 1.3rem;
+  animation: riseAndFade 1.8s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+}
+@keyframes riseAndFade {
+  0% { opacity: 1; transform: translateY(0) scale(0.8); }
+  100% { opacity: 0; transform: translateY(-90px) scale(1.35); }
+}
+
+@keyframes flowerFloatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -30px) scale(1.15);
+  }
+  75% {
+    opacity: 0.95;
+    transform: translate(-50%, -100px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -160px) scale(0.9);
+  }
+}
+
+.animate-flower-float {
+  animation: flowerFloatUp 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Animaciones para Toasts y Modales estilo MENUQR */
+@keyframes toastSlideIn {
+  0% { opacity: 0; transform: translateY(-16px) scale(0.96); filter: blur(4px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+.toast-enter {
+  animation: toastSlideIn 240ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalZoomIn {
+  0% { opacity: 0; transform: scale(0.94); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.modal-enter {
+  animation: modalZoomIn 200ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+

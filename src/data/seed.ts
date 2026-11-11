@@ -1,0 +1,658 @@
+import type { Familia, Persona, Dedicatoria } from "../types";
+
+export const initialFamilias: Familia[] = [
+  {
+    "id": "garcia",
+    "apellido": "García",
+    "lema": "La casa donde siempre se vuelve",
+    "total": 4,
+    "velas": 12,
+    "flores": 13,
+    "fotos": [
+      "/uploads/mw8tiuhm-095578accb.jpg",
+      "/uploads/mw8sxs8a-cd7ec45044.png",
+      "/uploads/mw8syll5-e46d7976c6.png",
+      "/uploads/mw8szgv2-984d3a4cb1.png"
+    ]
+  },
+  {
+    "id": "rodriguez",
+    "apellido": "Rodríguez",
+    "lema": "Gente de trabajo y de mesa larga",
+    "total": 3,
+    "velas": 0,
+    "flores": 0,
+    "fotos": []
+  },
+  {
+    "id": "martinez",
+    "apellido": "Martínez",
+    "lema": "Raíces del norte, corazón abierto",
+    "total": 3,
+    "velas": 0,
+    "flores": 0,
+    "fotos": []
+  },
+  {
+    "id": "herrera",
+    "apellido": "Herrera",
+    "lema": "La memoria de los que vinieron de lejos",
+    "total": 2,
+    "velas": 3,
+    "flores": 1,
+    "fotos": []
+  }
+];
+
+export const initialPersonas: Persona[] = [
+  {
+    "id": "juan-herrera",
+    "familia_id": "herrera",
+    "nombre": "Juan Herrera Campos",
+    "apodo": "El abuelo Juan",
+    "anios": "1926 — 1998",
+    "fechas": "4 de marzo de 1926 — 21 de diciembre de 1998",
+    "epitafio": "Cruzó el mar para darnos un futuro.",
+    "foto": null,
+    "bio": "Llegó con veinte años y una maleta de madera atada con cuerda. Trabajó en el campo, luego en una fundición, luego en lo que hiciera falta para sacar adelante a los suyos. Escribió cartas todas las semanas durante cuarenta años sin faltar una sola.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Almería"
+      ],
+      [
+        "Oficio",
+        "Agricultor y obrero"
+      ],
+      [
+        "Llegada",
+        "Año 1946"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/herrera1/900/700",
+      "https://picsum.photos/seed/herrera2/900/700"
+    ],
+    "videos": [],
+    "visitas": 5,
+    "velas": 3,
+    "flores": 1,
+    "orden": 1,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "antonio-rodriguez",
+    "familia_id": "rodriguez",
+    "nombre": "Antonio Rodríguez Vega",
+    "apodo": "Don Antonio",
+    "anios": "1929 — 2005",
+    "fechas": "1 de mayo de 1929 — 14 de octubre de 2005",
+    "epitafio": "Nunca faltó el pan ni la palabra dada.",
+    "foto": null,
+    "bio": "Panadero desde los catorce años. Se levantaba a las tres de la madrugada y volvía a casa cuando el sol ya calentaba. Fue el primero de la familia en tener un coche y el último en aprender a usar un móvil. Su pan recién horneado se recordó en el pueblo durante décadas.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Écija, Sevilla"
+      ],
+      [
+        "Oficio",
+        "Maestro Panadero"
+      ],
+      [
+        "Esposa",
+        "Carmen Vega Salas"
+      ],
+      [
+        "Hijos",
+        "5"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/rodri1/900/700",
+      "https://picsum.photos/seed/rodri2/900/700",
+      "https://picsum.photos/seed/rodri3/900/700"
+    ],
+    "videos": [],
+    "visitas": 1,
+    "velas": 0,
+    "flores": 0,
+    "orden": 1,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "amparo-herrera",
+    "familia_id": "herrera",
+    "nombre": "Amparo Herrera Campos",
+    "apodo": "Doña Amparo",
+    "anios": "1930 — 2012",
+    "fechas": "17 de mayo de 1930 — 9 de febrero de 2012",
+    "epitafio": "Guardiana de las cartas y de los nombres.",
+    "foto": null,
+    "bio": "Fue ella quien conservó todas las fotografías y cartas de la familia, atadas con una cinta roja. Sabía el nombre completo de cada primo, de cada pueblo y de cada historia antigua. Sin ella, media memoria familiar se habría perdido.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Almería"
+      ],
+      [
+        "Oficio",
+        "Bordadora y costurera"
+      ],
+      [
+        "Hermanos",
+        "2"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/amparo1/900/700",
+      "https://picsum.photos/seed/amparo2/900/700",
+      "https://picsum.photos/seed/amparo3/900/700"
+    ],
+    "videos": [],
+    "visitas": 2,
+    "velas": 0,
+    "flores": 0,
+    "orden": 2,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "francisco-martinez",
+    "familia_id": "martinez",
+    "nombre": "Francisco Martínez Ortega",
+    "apodo": "Don Paco el Maestro",
+    "anios": "1931 — 2009",
+    "fechas": "9 de septiembre de 1931 — 6 de junio de 2009",
+    "epitafio": "Enseñó a leer al que quiso aprender.",
+    "foto": null,
+    "bio": "Maestro de escuela rural y urbana durante cuarenta años. Guardaba las libretas de todos sus alumnos en el desván, ordenadas por curso y con anotaciones cariñosas. Decía siempre que un niño que aprende a leer ya nunca está solo en la vida.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Santander, Cantabria"
+      ],
+      [
+        "Oficio",
+        "Maestro de escuela"
+      ],
+      [
+        "Esposa",
+        "Rosario Ortega López"
+      ],
+      [
+        "Alumnos",
+        "Más de 2.000"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/paco1/900/700",
+      "https://picsum.photos/seed/paco2/900/700",
+      "https://picsum.photos/seed/paco3/900/700"
+    ],
+    "videos": [
+      {
+        "titulo": "Homenaje de sus alumnos · 2008",
+        "fuente": "YouTube",
+        "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+      }
+    ],
+    "visitas": 0,
+    "velas": 0,
+    "flores": 0,
+    "orden": 1,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "carmen-vega",
+    "familia_id": "rodriguez",
+    "nombre": "Carmen Vega Salas",
+    "apodo": "La abuela Carmen",
+    "anios": "1932 — 2010",
+    "fechas": "18 de agosto de 1932 — 2 de marzo de 2010",
+    "epitafio": "Cantaba coplas mientras amasaba.",
+    "foto": null,
+    "bio": "La abuela Carmen tenía una voz clara que llenaba toda la casa. Crió a cinco hijos y a media docena de vecinos que se sentaban a su mesa. Guardaba un refrán sabio para cada ocasión y nunca se le olvidaba un cumpleaños.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Écija, Sevilla"
+      ],
+      [
+        "Oficio",
+        "Ama de casa y panadera"
+      ],
+      [
+        "Esposo",
+        "Antonio Rodríguez Vega"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/carmen1/900/700",
+      "https://picsum.photos/seed/carmen2/900/700"
+    ],
+    "videos": [
+      {
+        "titulo": "Cantando en familia · 1998",
+        "fuente": "YouTube",
+        "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+      }
+    ],
+    "visitas": 0,
+    "velas": 0,
+    "flores": 0,
+    "orden": 2,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "jose-garcia",
+    "familia_id": "garcia",
+    "nombre": "José Antonio García Ruiz",
+    "apodo": "El abuelo Pepe",
+    "anios": "1935 — 2018",
+    "fechas": "12 de abril de 1935 — 3 de septiembre de 2018",
+    "epitafio": "Su risa sigue sonando en el patio de la casa.",
+    "foto": "/uploads/mw8tiuhm-095578accb.jpg",
+    "bio": "Carpintero de oficio y contador de historias por vocación. Pasó media vida en el taller del barrio, donde aprendió a arreglar muebles y a escuchar. Le gustaba el café muy cargado, las tardes de dominó y las bodas con guitarra. Se fue un martes por la mañana, sin hacer ruido, como vivió.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Jerez de la Frontera, Cádiz"
+      ],
+      [
+        "Oficio",
+        "Maestro Carpintero"
+      ],
+      [
+        "Esposa",
+        "María Ruiz Fernández"
+      ],
+      [
+        "Hijos",
+        "3"
+      ],
+      [
+        "Nietos",
+        "7"
+      ]
+    ],
+    "galeria": [
+      "/uploads/mw8tiuhr-a8abeed16c.jpg",
+      "/uploads/mw8tiuhu-ea24c0a11d.jpg",
+      "/uploads/mw8tiui1-0d49a2b9fd.jpg",
+      "/uploads/mw8tiui7-5cdbac23ba.jpg",
+      "/uploads/mw8srcx9-8d7955fb4b.jpg",
+      "/uploads/mw8srcxb-97458dbdda.jpg",
+      "/uploads/mw8srcxf-326eee974e.jpg",
+      "/uploads/mw8srcxt-6876045459.png"
+    ],
+    "videos": [
+      {
+        "titulo": "Cumpleaños 80 · 2015",
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      },
+      {
+        "titulo": "Recuerdo en el patio (Formato Vertical)",
+        "url": "https://www.tiktok.com/@tiktok/video/7106594312292453675"
+      }
+    ],
+    "visitas": 48,
+    "velas": 12,
+    "flores": 12,
+    "orden": 1,
+    "foto_pos": "50% 12%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": "https://youtu.be/vmek8xS3qa4?list=RDvmek8xS3qa4",
+    "musica_titulo": "HUbe",
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "rosario-ortega",
+    "familia_id": "martinez",
+    "nombre": "Rosario Ortega López",
+    "apodo": "Charo",
+    "anios": "1936 — 2017",
+    "fechas": "11 de noviembre de 1936 — 4 de abril de 2017",
+    "epitafio": "Su jardín era su manera de hablar.",
+    "foto": null,
+    "bio": "Tenía manos de jardinera y paciencia infinita. El balcón de su casa era la alegría de la calle: geranios, hortensias y jazmines en primavera. Hacía punto mientras escuchaba la radio por las tardes y tejía bufandas para cada nieto en invierno.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Santander, Cantabria"
+      ],
+      [
+        "Pasión",
+        "Botánica y tejido"
+      ],
+      [
+        "Esposo",
+        "Francisco Martínez Ortega"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/rosario1/900/700",
+      "https://picsum.photos/seed/rosario2/900/700"
+    ],
+    "videos": [],
+    "visitas": 0,
+    "velas": 0,
+    "flores": 0,
+    "orden": 2,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "maria-ruiz",
+    "familia_id": "garcia",
+    "nombre": "María Ruiz Fernández",
+    "apodo": "María la costurera",
+    "anios": "1938 — 2021",
+    "fechas": "2 de febrero de 1938 — 19 de enero de 2021",
+    "epitafio": "Cosiendo recuerdos para que nada se perdiera.",
+    "foto": "/uploads/mw8sxs8a-cd7ec45044.png",
+    "bio": "Cosió vestidos de comunión, trajes de boda y alguna que otra sábana remendada mil veces. Nunca aprendió a decir que no. Guardaba las cartas de toda la familia en una caja de latón que aún huele a lavanda. Su cocina era el corazón de la casa: siempre había un plato de más por si alguien llegaba.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Arcos de la Frontera, Cádiz"
+      ],
+      [
+        "Oficio",
+        "Costurera"
+      ],
+      [
+        "Esposo",
+        "José Antonio García Ruiz"
+      ],
+      [
+        "Hijos",
+        "3"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/ruiz1/900/700",
+      "https://picsum.photos/seed/ruiz2/900/700",
+      "https://picsum.photos/seed/ruiz3/900/700",
+      "https://picsum.photos/seed/ruiz4/900/700"
+    ],
+    "videos": [
+      {
+        "titulo": "Sus 80 años · Discurso en familia",
+        "url": "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+      }
+    ],
+    "visitas": 15,
+    "velas": 0,
+    "flores": 0,
+    "orden": 2,
+    "foto_pos": "50% 25%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": "https://youtu.be/9asp_Odf6n4?list=RD9asp_Odf6n4&t=61",
+    "musica_titulo": "Nadie puede detenerle",
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "rafael-rodriguez",
+    "familia_id": "rodriguez",
+    "nombre": "Rafael Rodríguez Vega",
+    "apodo": "Rafa el Marino",
+    "anios": "1940 — 2014",
+    "fechas": "30 de junio de 1940 — 27 de noviembre de 2014",
+    "epitafio": "El que siempre tenía una historia que contar.",
+    "foto": null,
+    "bio": "Fue marinero mercante antes que ferroviario. Recorrió medio mundo y volvió con mil anécdotas de puertos lejanos. Le encantaba pescar los domingos al amanecer y luego repartir lo pescado por todo el vecindario.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Écija, Sevilla"
+      ],
+      [
+        "Oficio",
+        "Marinero y ferroviario"
+      ],
+      [
+        "Hermanos",
+        "5"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/rafa1/900/700",
+      "https://picsum.photos/seed/rafa2/900/700",
+      "https://picsum.photos/seed/rafa3/900/700"
+    ],
+    "videos": [],
+    "visitas": 1,
+    "velas": 0,
+    "flores": 0,
+    "orden": 3,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "manuel-garcia",
+    "familia_id": "garcia",
+    "nombre": "Manuel García Ruiz",
+    "apodo": "El tío Manolo",
+    "anios": "1942 — 2016",
+    "fechas": "7 de julio de 1942 — 22 de diciembre de 2016",
+    "epitafio": "Tocaba la guitarra como quien respira.",
+    "foto": "/uploads/mw8syll5-e46d7976c6.png",
+    "bio": "El tío Manolo nunca tuvo prisa. Aprendió a tocar la guitarra de oído y se pasó la vida acompañando bodas, bautizos y reuniones de familia. Donde había una silla libre, él se sentaba con su instrumento. Decía que las canciones son la única forma de no olvidar del todo.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Jerez de la Frontera"
+      ],
+      [
+        "Oficio",
+        "Músico y electricista"
+      ],
+      [
+        "Hermanos",
+        "4"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/manolo1/900/700",
+      "https://picsum.photos/seed/manolo2/900/700",
+      "https://picsum.photos/seed/manolo3/900/700"
+    ],
+    "videos": [
+      {
+        "titulo": "Fandangos en la boda de Ana",
+        "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+      }
+    ],
+    "visitas": 36,
+    "velas": 0,
+    "flores": 1,
+    "orden": 3,
+    "foto_pos": "26% 34%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": "https://youtu.be/9asp_Odf6n4?list=RD9asp_Odf6n4&t=61",
+    "musica_titulo": "Nadie puede detenerle",
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "elena-martinez",
+    "familia_id": "martinez",
+    "nombre": "Elena Martínez Ortega",
+    "apodo": "La tía Elena",
+    "anios": "1945 — 2020",
+    "fechas": "23 de enero de 1945 — 15 de julio de 2020",
+    "epitafio": "La que sostenía la familia sin que nadie lo notara.",
+    "foto": null,
+    "bio": "Enfermera de vocación y tía de todos. Nunca se casó, pero tuvo sobrinos, sobrinos nietos y vecinos que la llamaban «tía Elena». Cuidó con ternura a media familia y siempre decía que era ella la que salía ganando.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Santander, Cantabria"
+      ],
+      [
+        "Oficio",
+        "Enfermera Jefe"
+      ],
+      [
+        "Hermanos",
+        "3"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/elena1/900/700",
+      "https://picsum.photos/seed/elena2/900/700",
+      "https://picsum.photos/seed/elena3/900/700"
+    ],
+    "videos": [],
+    "visitas": 0,
+    "velas": 0,
+    "flores": 0,
+    "orden": 3,
+    "foto_pos": "50% 50%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  },
+  {
+    "id": "lucia-garcia",
+    "familia_id": "garcia",
+    "nombre": "Lucía García Molina",
+    "apodo": "Luci",
+    "anios": "1990 — 2019",
+    "fechas": "14 de marzo de 1990 — 8 de agosto de 2019",
+    "epitafio": "Demasiado pronto, demasiada luz.",
+    "foto": "/uploads/mw8szgv2-984d3a4cb1.png",
+    "bio": "Estudiaba Bellas Artes y llenaba de dibujos cualquier papel que encontraba. Amaba el mar, los perros callejeros y las conversaciones de madrugada. Su habitación sigue tal y como la dejó, con los pinceles secos sobre la mesa y un cuaderno de acuarelas a medio terminar.",
+    "datos": [
+      [
+        "Nacimiento",
+        "Sevilla"
+      ],
+      [
+        "Vocación",
+        "Pintora y Bellas Artes"
+      ],
+      [
+        "Edad",
+        "29 años"
+      ]
+    ],
+    "galeria": [
+      "https://picsum.photos/seed/lucia1/900/700",
+      "https://picsum.photos/seed/lucia2/900/700",
+      "https://picsum.photos/seed/lucia3/900/700",
+      "https://picsum.photos/seed/lucia4/900/700"
+    ],
+    "videos": [],
+    "visitas": 8,
+    "velas": 0,
+    "flores": 0,
+    "orden": 4,
+    "foto_pos": "26% 36%",
+    "estado": "publicado",
+    "solicitante": null,
+    "contacto": null,
+    "fecha_solicitud": null,
+    "musica": null,
+    "musica_titulo": null,
+    "musicas_rotacion": [],
+    "musicas_inicio": null
+  }
+];
+
+export const initialDedicatorias: Dedicatoria[] = [
+  {
+    "id": 3,
+    "persona_id": "jose-garcia",
+    "autor": "Su nieto Andres",
+    "texto": "Descansa en paz guerrera",
+    "fecha": "9 nov 2026",
+    "persona_nombre": "José Antonio García Ruiz"
+  },
+  {
+    "id": 2,
+    "persona_id": "maria-ruiz",
+    "autor": "Carmen G.",
+    "texto": "Aún conservo la cajita de latón con tus dedales. Gracias por enseñarnos a mantenernos unidos.",
+    "fecha": "Recuerdo permanente",
+    "persona_nombre": "María Ruiz Fernández"
+  },
+  {
+    "id": 1,
+    "persona_id": "jose-garcia",
+    "autor": "Su nieta Elena",
+    "texto": "Cada vez que huelo a serrín o a madera de pino me acuerdo de tus manos, abuelo.",
+    "fecha": "Hace 2 meses",
+    "persona_nombre": "José Antonio García Ruiz"
+  }
+];
