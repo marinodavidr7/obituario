@@ -1,7 +1,6 @@
 import "@vitejs/plugin-react/preamble";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { registerSW } from "virtual:pwa-register";
 import App from "./App";
 import "./index.css";
 import { initTheme } from "./lib/theme";
@@ -18,16 +17,17 @@ if (import.meta.env.DEV && typeof window !== "undefined" && "serviceWorker" in n
   });
 }
 
-// Registrar Service Worker solo en producción para PWA offline
+// Registrar Service Worker en producción para PWA offline de forma nativa y robusta
 if (import.meta.env.PROD && typeof window !== "undefined" && "serviceWorker" in navigator) {
-  registerSW({
-    immediate: true,
-    onNeedRefresh() {
-      console.log("[PWA Panteón] Nueva versión disponible.");
-    },
-    onOfflineReady() {
-      console.log("[PWA Panteón] Santuario disponible 100% offline.");
-    },
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        console.log("[PWA Obituario] Service Worker registrado:", reg.scope);
+      })
+      .catch((err) => {
+        console.warn("[PWA Obituario] Registro de Service Worker:", err);
+      });
   });
 }
 
