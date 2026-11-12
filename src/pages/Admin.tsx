@@ -19,7 +19,7 @@ import {
   setConfig,
   stats,
 } from "@/lib/db";
-import { getTelegramConfig } from "@/lib/telegram";
+import { getTelegramConfig, guardarTelegramConfig, probarTelegram, verificarBotTelegram } from "@/lib/telegram";
 import { guardarArchivo } from "@/lib/uploads";
 import { iniciales } from "@/lib/utils";
 import type { Dedicatoria, Familia, Persona, SanctuaryStats } from "@/types";
@@ -59,6 +59,12 @@ export default function Admin() {
   const [musicaBorrada, setMusicaBorrada] = useState(false);
   const [temaGeneral, setTemaGeneral] = useState<ThemeId>(getGeneralSanctuaryTheme);
 
+  const [telegramToken, setTelegramToken] = useState<string>(() => getTelegramConfig().token);
+  const [telegramChatId, setTelegramChatId] = useState<string>(() => getTelegramConfig().chatId);
+  const [telegramBotInfo, setTelegramBotInfo] = useState<{ username?: string; firstName?: string } | null>(null);
+  const [probandoTelegram, setProbandoTelegram] = useState(false);
+  const [guardandoTelegram, setGuardandoTelegram] = useState(false);
+
   const refreshData = () => {
     setFamilias(listFamilias());
     setDedicatorias(listTodasDedicatorias(30));
@@ -69,6 +75,8 @@ export default function Admin() {
     const v = parseInt(getConfig("musica_volumen") || "70", 10);
     setMusicaVolumen(isNaN(v) ? 70 : v);
     setTemaGeneral(getGeneralSanctuaryTheme());
+    setTelegramToken(getTelegramConfig().token);
+    setTelegramChatId(getTelegramConfig().chatId);
   };
 
   const handleCambiarTemaGeneral = (nuevoTema: ThemeId) => {
@@ -135,6 +143,54 @@ export default function Admin() {
     setMusicaBorrada(true);
     setTimeout(() => setMusicaBorrada(false), 3000);
     window.dispatchEvent(new Event("panteon:db-updated"));
+  };
+
+  useEffect(() => {
+    if (telegramToken && telegramToken.trim()) {
+      verificarBotTelegram(telegramToken).then((res) => {
+        if (res.ok) {
+          setTelegramBotInfo({ username: res.username, firstName: res.firstName });
+        } else {
+          setTelegramBotInfo(null);
+        }
+      });
+    } else {
+      setTelegramBotInfo(null);
+    }
+  }, [telegramToken]);
+
+  const handleGuardarTelegram = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGuardandoTelegram(true);
+    try {
+      guardarTelegramConfig(telegramToken, telegramChatId);
+      window.dispatchEvent(new Event("panteon:db-updated"));
+      toast("Configuración del Bot de Telegram guardada correctamente.", "success");
+    } finally {
+      setGuardandoTelegram(false);
+    }
+  };
+
+  const handleProbarTelegram = async () => {
+    if (!telegramToken.trim()) {
+      toast("Ingresa el Bot Token primero", "error");
+      return;
+    }
+    if (!telegramChatId.trim()) {
+      toast("Ingresa el Chat ID donde deseas recibir los mensajes", "error");
+      return;
+    }
+    setProbandoTelegram(true);
+    try {
+      const res = await probarTelegram(telegramToken, telegramChatId);
+      if (res.ok) {
+        toast("🕊️ ¡Mensaje enviado con éxito a Telegram! Revisa tu chat.", "success");
+      } else {
+        toast(`Error de Telegram: ${res.error}`, "error");
+      }
+    } finally {
+      setProbandoTelegram(false);
+    }
   };
 
   if (!authed) {
@@ -339,32 +395,143 @@ export default function Admin() {
         </div>
       )}
 
-      {/* Estado de conexión del Bot de Telegram */}
-      <div className="mt-6 p-4 rounded-xl border border-white/10 bg-stone-900/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2.5">
-          <span className="text-lg">🤖</span>
-          <div>
-            <span className="font-medium text-stone-200 block">
-              {telegramConfig.configurado
-                ? "Bot de Telegram Activo y Conectado"
-                : "Bot de Telegram para Alertas Móviles"}
+      {/* SECCIÓN: BOT DE TELEGRAM Y ALERTAS MÓVILES */}
+      <div className="mt-8 rounded-2xl border border-gold/30 bg-gradient-to-b from-stone-900/90 via-stone-900/70 to-stone-950 p-5 sm:p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-white/10 mb-4">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-full bg-blue-500/20 text-blue-400 grid place-items-center text-lg shrink-0">
+              🤖
             </span>
-            <span className="text-stone-400">
-              {telegramConfig.configurado
-                ? "Recibirás un mensaje en Telegram cada vez que alguien inscriba a un familiar."
-                : "Añade VITE_TELEGRAM_BOT_TOKEN y VITE_TELEGRAM_CHAT_ID a tu archivo .env para recibir alertas directas."}
-            </span>
+            <div>
+              <h2 className="font-serif text-2xl text-[#f4f1eb]">Bot de Telegram para Alertas Móviles</h2>
+              <p className="text-xs text-stone-400">
+                Recibe una notificación inmediata en tu Telegram cada vez que alguien solicite inscribir a un familiar.
+              </p>
+            </div>
           </div>
+          {telegramBotInfo ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 rounded-full px-3 py-1 self-start sm:self-auto">
+              ✦ Bot activo: @{telegramBotInfo.username}
+            </span>
+          ) : telegramToken ? (
+            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-amber-300 bg-amber-950/60 border border-amber-500/40 rounded-full px-3 py-1 self-start sm:self-auto">
+              ✦ Verificando bot...
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-stone-400 bg-stone-800 border border-white/10 rounded-full px-3 py-1 self-start sm:self-auto">
+              Sin vincular
+            </span>
+          )}
         </div>
-        {telegramConfig.configurado ? (
-          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 rounded-full px-3 py-1 self-start sm:self-auto">
-            ✦ Bot conectado
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-stone-400 bg-stone-800 border border-white/10 rounded-full px-3 py-1 self-start sm:self-auto">
-            Configuración opcional
-          </span>
-        )}
+
+        <form onSubmit={handleGuardarTelegram} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-stone-300 mb-1.5">
+                Bot Token de Telegram
+              </label>
+              <input
+                type="text"
+                value={telegramToken}
+                onChange={(e) => setTelegramToken(e.target.value)}
+                placeholder="Ej: 8560777329:AAEeeq..."
+                className="w-full bg-stone-950/70 border border-white/10 focus:border-gold/60 rounded-xl px-3.5 py-2.5 text-xs text-stone-100 placeholder:text-stone-600 outline-none transition-colors font-mono"
+              />
+              {telegramBotInfo && (
+                <div className="mt-1.5 flex items-center gap-2 text-[11px] text-emerald-400">
+                  <span>✓ Bot verificado:</span>
+                  <a
+                    href={`https://t.me/${telegramBotInfo.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline hover:text-gold-soft"
+                  >
+                    @{telegramBotInfo.username} ({telegramBotInfo.firstName})
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider text-stone-300 mb-1.5">
+                Telegram Chat ID (Personal o de Grupo)
+              </label>
+              <input
+                type="text"
+                value={telegramChatId}
+                onChange={(e) => setTelegramChatId(e.target.value)}
+                placeholder="Ej: 123456789 o -100..."
+                className="w-full bg-stone-950/70 border border-white/10 focus:border-gold/60 rounded-xl px-3.5 py-2.5 text-xs text-stone-100 placeholder:text-stone-600 outline-none transition-colors font-mono"
+              />
+              <p className="mt-1 text-[11px] text-stone-400">
+                El ID numérico del usuario o grupo de Telegram donde llegarán los mensajes.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-stone-950/60 border border-white/10 text-xs text-stone-400 leading-relaxed">
+            <span className="text-gold font-medium block mb-1">💡 ¿Cómo vincular tu Telegram?</span>
+            <ol className="list-decimal list-inside space-y-1 text-[11px]">
+              <li>
+                Abre el bot{" "}
+                {telegramBotInfo?.username ? (
+                  <a
+                    href={`https://t.me/${telegramBotInfo.username}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gold-soft underline"
+                  >
+                    @{telegramBotInfo.username}
+                  </a>
+                ) : (
+                  <span className="text-stone-300 font-mono">el bot</span>
+                )}{" "}
+                en Telegram y presiona <b>Iniciar (/start)</b>.
+              </li>
+              <li>
+                Para saber tu Chat ID personal, puedes escribirle a{" "}
+                <a
+                  href="https://t.me/userinfobot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gold-soft underline"
+                >
+                  @userinfobot
+                </a>{" "}
+                o{" "}
+                <a
+                  href="https://t.me/myidbot"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gold-soft underline"
+                >
+                  @myidbot
+                </a>{" "}
+                y copiar el número <code>Id</code> que te responde.
+              </li>
+              <li>Pega el Chat ID arriba, pulsa <b>Guardar Configuración</b> y haz clic en <b>Enviar Mensaje de Prueba</b>.</li>
+            </ol>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={guardandoTelegram}
+              className={`${pill} bg-gold/20 hover:bg-gold/30 border border-gold/60 text-gold-soft font-medium disabled:opacity-50`}
+            >
+              {guardandoTelegram ? "Guardando..." : "Guardar Configuración"}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleProbarTelegram}
+              disabled={probandoTelegram || !telegramToken.trim() || !telegramChatId.trim()}
+              className={`${pill} bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/50 text-blue-200 font-medium disabled:opacity-40 flex items-center gap-1.5`}
+            >
+              <span>{probandoTelegram ? "Enviando..." : "🕊️ Enviar Mensaje de Prueba"}</span>
+            </button>
+          </div>
+        </form>
       </div>
 
       {/* 2. SECCIÓN: COLOR Y TEMA GENERAL DEL PANTEÓN (ADMINISTRADOR) */}

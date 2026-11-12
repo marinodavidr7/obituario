@@ -39,4 +39,11 @@ describe("PersonaView & App Rendering", () => {
     expect(html).toContain("Volver al obituario");
     expect(html).toContain("García");
   });
+
+  it("renders PersonaView gracefully when person is initially loading or not in cache", () => {
+    expect(() => {
+      const html = renderToString(React.createElement(PersonaView, { id: "persona-inexistente-o-nueva" }));
+      expect(html).toBeDefined();
+    }).not.toThrow();
+  });
 });

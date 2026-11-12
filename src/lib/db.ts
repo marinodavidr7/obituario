@@ -143,6 +143,19 @@ export async function syncFromSupabase(): Promise<void> {
       cfgRes.data.forEach((r: { clave: string; valor: string }) => {
         cachedConfig[r.clave] = r.valor;
       });
+
+      // Hidratar tipos de flores específicos desde config si están disponibles
+      cachedPersonas.forEach((p) => {
+        const raw = cachedConfig[`flores_tipos_${p.id}`];
+        if (raw) {
+          try {
+            const arr = JSON.parse(raw);
+            if (Array.isArray(arr)) {
+              p.flores_tipos = arr;
+            }
+          } catch {}
+        }
+      });
     }
 
     saveState();
@@ -460,11 +473,26 @@ export function addOfrenda(
 
   // Enviar a Supabase y emitir broadcast Realtime a todos los usuarios
   if (isSupabaseConfigured) {
+    // 1. Persistir conteo de velas y flores en la tabla personas (columnas oficiales)
     supabase
       .from("personas")
-      .update({ velas: p.velas, flores: p.flores, flores_tipos: p.flores_tipos })
+      .update({ velas: p.velas, flores: p.flores })
       .eq("id", personaId)
-      .then();
+      .then(({ error }) => {
+        if (error) {
+          console.error("[panteon/db] Error al persistir ofrenda en Supabase:", error);
+        } else {
+          console.log("[panteon/db] Ofrenda guardada con éxito en Supabase:", { id: personaId, velas: p.velas, flores: p.flores });
+        }
+      });
+
+    // 2. Si se depositó una flor, persistir la lista de arreglos elegidos en config para compartirla
+    if (tipo === "flor" && p.flores_tipos && p.flores_tipos.length > 0) {
+      supabase
+        .from("config")
+        .upsert({ clave: `flores_tipos_${personaId}`, valor: JSON.stringify(p.flores_tipos) })
+        .then();
+    }
   }
 
   broadcastOfrenda(personaId, p.velas, p.flores, p.flores_tipos, tipo, florTipo);

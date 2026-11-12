@@ -1,14 +1,95 @@
-import { aprobarPersona, getFamilia, getPersona, rechazarPersona, getConfig } from "@/lib/db";
+import { aprobarPersona, getFamilia, getPersona, rechazarPersona, getConfig, setConfig } from "@/lib/db";
 
 export function getTelegramConfig() {
   const envToken = (import.meta.env.VITE_TELEGRAM_BOT_TOKEN as string) || "";
   const envChatId = (import.meta.env.VITE_TELEGRAM_CHAT_ID as string) || "";
 
-  const token = (envToken || getConfig("telegram_bot_token") || "").trim();
-  const chatId = (envChatId || getConfig("telegram_chat_id") || "").trim();
+  const token = (getConfig("telegram_bot_token") || envToken || "").trim();
+  const chatId = (getConfig("telegram_chat_id") || envChatId || "").trim();
   const appUrl = (typeof window !== "undefined" ? window.location.origin : "").replace(/\/$/, "");
 
   return { token, chatId, appUrl, configurado: Boolean(token && chatId) };
+}
+
+export function guardarTelegramConfig(token: string, chatId: string) {
+  setConfig("telegram_bot_token", token.trim() || null);
+  setConfig("telegram_chat_id", chatId.trim() || null);
+}
+
+export async function verificarBotTelegram(customToken?: string): Promise<{ ok: boolean; username?: string; firstName?: string; error?: string }> {
+  const cfg = getTelegramConfig();
+  const token = (customToken !== undefined ? customToken : cfg.token).trim();
+  if (!token) return { ok: false, error: "Token no proporcionado" };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+    const data = await res.json().catch(() => ({}));
+    if (data.ok && data.result) {
+      return { ok: true, username: data.result.username, firstName: data.result.first_name };
+    }
+    return { ok: false, error: data.description || "Token de bot inválido" };
+  } catch (e: any) {
+    return { ok: false, error: e.message || "Error al conectar con Telegram" };
+  }
+}
+
+export async function probarTelegram(customToken?: string, customChatId?: string): Promise<{ ok: boolean; error?: string }> {
+  const cfg = getTelegramConfig();
+  const token = (customToken !== undefined ? customToken : cfg.token).trim();
+  const chatId = (customChatId !== undefined ? customChatId : cfg.chatId).trim();
+
+  if (!token) return { ok: false, error: "Falta el Bot Token de Telegram" };
+  if (!chatId) return { ok: false, error: "Falta el Chat ID de Telegram" };
+
+  const texto = [
+    "🕊️ *PRUEBA DE CONEXIÓN CON EL BOT*",
+    "──────────────────────────",
+    "¡El Bot de Telegram para el Obituario Familiar está correctamente vinculado!",
+    "",
+    "A partir de ahora, cada vez que una familia inscriba a un nuevo ser querido, recibirás la ficha completa aquí para revisarla y aprobarla.",
+    `📅 Fecha: ${new Date().toLocaleString("es-ES")}`,
+  ].join("\n");
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: texto,
+        parse_mode: "Markdown",
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return { ok: false, error: errData.description || "Error de API Telegram" };
+    }
+
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error de red al conectar con Telegram" };
+  }
+}
+
+export async function registrarWebhookTelegram(customToken?: string, webhookUrl?: string): Promise<{ ok: boolean; error?: string }> {
+  const cfg = getTelegramConfig();
+  const token = (customToken !== undefined ? customToken : cfg.token).trim();
+  const url = (webhookUrl || `${cfg.appUrl}/api/telegram`).trim();
+
+  if (!token) return { ok: false, error: "Falta el token del bot" };
+  if (!url || !url.startsWith("https://")) {
+    return { ok: false, error: "La URL debe comenzar con HTTPS (ej: https://ariocloud.vercel.app/api/telegram)" };
+  }
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(url)}`);
+    const data = await res.json().catch(() => ({}));
+    if (data.ok) return { ok: true };
+    return { ok: false, error: data.description || "Error al registrar webhook" };
+  } catch (e: any) {
+    return { ok: false, error: e.message || "Error de red al conectar con Telegram" };
+  }
 }
 
 export async function notificarSolicitudTelegram(personaId: string): Promise<{ ok: boolean; error?: string }> {

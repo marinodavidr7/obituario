@@ -41,6 +41,21 @@ export default function Altar({
   const [showFlorModal, setShowFlorModal] = useState(false);
   const [floatingTributes, setFloatingTributes] = useState<FloatingTribute[]>([]);
 
+  // Sincronizar estado cuando las props cambien (ej. al recibir datos actualizados desde Supabase)
+  useEffect(() => {
+    setVelas(v0);
+  }, [v0]);
+
+  useEffect(() => {
+    setFlores(f0);
+  }, [f0]);
+
+  useEffect(() => {
+    if (Array.isArray(ft0)) {
+      setFloresTipos(ft0);
+    }
+  }, [ft0]);
+
   // Detección reactiva de pantalla móvil para dimensionar el altar a la perfección
   const [isMobile, setIsMobile] = useState(() => {
     if (typeof window !== "undefined") {

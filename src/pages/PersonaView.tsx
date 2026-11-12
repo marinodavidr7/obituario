@@ -84,7 +84,13 @@ export default function PersonaView({ id }: { id: string }) {
   const [dedicatorias, setDedicatorias] = useState<Dedicatoria[]>(() => listDedicatorias(id));
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+  const [cargando, setCargando] = useState<boolean>(() => !getPersonaSync(id));
   const esAdmin = useAdmin();
+
+  // Swipe horizontal en móvil para navegar entre lápidas de familiares (declarados en el top level)
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState<number>(0);
 
   useEffect(() => {
     const handleAudioState = (e: Event) => {
@@ -123,6 +129,7 @@ export default function PersonaView({ id }: { id: string }) {
       }
 
       if (isCancelled) return;
+      setCargando(false);
 
       if (!p) {
         setPersona(null);
@@ -183,6 +190,16 @@ export default function PersonaView({ id }: { id: string }) {
     };
   }, [id]);
 
+  if (cargando && !persona) {
+    return (
+      <div className="py-28 text-center flex flex-col items-center justify-center fade-enter">
+        <div className="w-10 h-10 rounded-full border-2 border-gold/20 border-t-gold animate-spin mb-4" />
+        <p className="font-serif text-lg text-stone-300">Accediendo al santuario memorial...</p>
+        <p className="text-xs text-stone-500 mt-1 font-light">Cargando memorias y ofrendas</p>
+      </div>
+    );
+  }
+
   if (!persona) {
     return (
       <div className="py-24 text-center">
@@ -203,11 +220,6 @@ export default function PersonaView({ id }: { id: string }) {
   const hasMultipleHermanos = idx >= 0 && hermanos.length > 1;
   const prev = hasMultipleHermanos ? hermanos[(idx - 1 + hermanos.length) % hermanos.length] : null;
   const next = hasMultipleHermanos ? hermanos[(idx + 1) % hermanos.length] : null;
-
-  // Swipe horizontal en móvil para navegar entre lápidas de familiares
-  const touchStartX = useRef<number | null>(null);
-  const touchStartY = useRef<number | null>(null);
-  const [swipeOffset, setSwipeOffset] = useState<number>(0);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     if (e.touches.length === 1) {
