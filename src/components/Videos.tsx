@@ -68,7 +68,7 @@ export default function Videos({ videos, nombre = "En Memoria" }: VideosProps) {
 
   return (
     <div className="w-full space-y-5">
-      {/* Cabecera idéntica al diseño con selector [ Retrato | Cine ] */}
+      {/* Cabecera con selector [ Retrato | Cine ] */}
       <div className="flex items-center justify-between gap-4 border-b border-pink-400/20 pb-3">
         <div className="flex items-center gap-3 min-w-0">
           <h4 className="text-[11px] sm:text-xs font-semibold tracking-[0.25em] uppercase text-pink-300/90 truncate">
@@ -104,12 +104,12 @@ export default function Videos({ videos, nombre = "En Memoria" }: VideosProps) {
         </div>
       </div>
 
-      {/* Grid de vídeos estilo TikTok sin bordes negros */}
+      {/* Grid de vídeos: sin bordes negros y sin datos en modo Cine */}
       <div
         className={
           modo === "retrato"
             ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-7 justify-center items-start"
-            : "grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"
+            : "grid grid-cols-1 gap-6 max-w-4xl mx-auto"
         }
       >
         {videoList.map((v) => {
@@ -120,11 +120,11 @@ export default function Videos({ videos, nombre = "En Memoria" }: VideosProps) {
               key={`${v.url}-${v.index}`}
               className={`group relative mx-auto w-full ${
                 modo === "retrato"
-                  ? "max-w-[340px] xs:max-w-[360px] aspect-[9/16]"
-                  : "aspect-video max-w-3xl"
-              } rounded-[32px] sm:rounded-[36px] overflow-hidden border border-pink-400/25 bg-stone-950 shadow-[0_20px_50px_rgba(0,0,0,0.85)]`}
+                  ? "max-w-[340px] xs:max-w-[360px] aspect-[9/16] rounded-[32px] sm:rounded-[36px]"
+                  : "aspect-video max-w-4xl rounded-2xl"
+              } overflow-hidden border border-pink-400/25 bg-black shadow-[0_20px_50px_rgba(0,0,0,0.85)]`}
             >
-              {/* Vídeo en bucle automático - scale-[1.3] elimina bordes negros laterales de Shorts */}
+              {/* Vídeo en bucle automático - scale elimina cualquier borde negro */}
               {v.embedUrl ? (
                 <div className="w-full h-full overflow-hidden relative bg-black">
                   <iframe
@@ -134,7 +134,11 @@ export default function Videos({ videos, nombre = "En Memoria" }: VideosProps) {
                     src={v.embedUrl}
                     title={v.titulo}
                     className={`w-full h-full border-0 transform ${
-                      modo === "retrato" ? "scale-[1.35]" : "scale-[1.01]"
+                      modo === "retrato"
+                        ? "scale-[1.35]"
+                        : v.isVertical
+                        ? "scale-[1.78]"
+                        : "scale-[1.02]"
                     } origin-center pointer-events-auto`}
                     allow="autoplay; encrypted-media; picture-in-picture"
                     allowFullScreen
@@ -148,12 +152,14 @@ export default function Videos({ videos, nombre = "En Memoria" }: VideosProps) {
                 </div>
               )}
 
-              {/* Insignia superior izquierda (MEMORIA EN VIVO / HOMENAJE) */}
-              <div className="absolute top-4 left-4 z-20 pointer-events-none">
-                <span className="px-3 py-1 rounded-full text-[10px] uppercase font-sans tracking-[0.16em] font-semibold bg-black/65 backdrop-blur-md border border-white/10 text-stone-100 shadow-md">
-                  {v.badgeText}
-                </span>
-              </div>
+              {/* Insignia superior izquierda: SOLO en modo Retrato (en modo Cine queda limpio sin datos) */}
+              {modo === "retrato" && (
+                <div className="absolute top-4 left-4 z-20 pointer-events-none">
+                  <span className="px-3 py-1 rounded-full text-[10px] uppercase font-sans tracking-[0.16em] font-semibold bg-black/65 backdrop-blur-md border border-white/10 text-stone-100 shadow-md">
+                    {v.badgeText}
+                  </span>
+                </div>
+              )}
 
               {/* Botón superior derecho para activar audio */}
               {v.ytId && (
@@ -172,20 +178,22 @@ export default function Videos({ videos, nombre = "En Memoria" }: VideosProps) {
                 </button>
               )}
 
-              {/* Capa inferior con frase/título y créditos estilo TikTok */}
-              <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none z-10">
-                <p className="font-serif italic text-sm sm:text-base text-stone-100 leading-snug line-clamp-2">
-                  “{v.titulo || "Tu alegría ilumina cada recuerdo"}”
-                </p>
-                <div className="flex items-center justify-between text-[11px] text-stone-400 mt-2 font-sans">
-                  <span className="truncate font-light">
-                    {nombre.split(" ")[0]} • Archivo Familiar
-                  </span>
-                  <span className="font-mono text-stone-400/90 shrink-0 ml-2 text-[10px]">
-                    {v.isShort ? "Shorts" : "Vídeo"}
-                  </span>
+              {/* Capa inferior con frase y créditos: SOLO en modo Retrato (en modo Cine queda limpio sin datos) */}
+              {modo === "retrato" && (
+                <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5 bg-gradient-to-t from-black/95 via-black/60 to-transparent pointer-events-none z-10">
+                  <p className="font-serif italic text-sm sm:text-base text-stone-100 leading-snug line-clamp-2">
+                    “{v.titulo || "Tu alegría ilumina cada recuerdo"}”
+                  </p>
+                  <div className="flex items-center justify-between text-[11px] text-stone-400 mt-2 font-sans">
+                    <span className="truncate font-light">
+                      {nombre.split(" ")[0]} • Archivo Familiar
+                    </span>
+                    <span className="font-mono text-stone-400/90 shrink-0 ml-2 text-[10px]">
+                      {v.isShort ? "Shorts" : "Vídeo"}
+                    </span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
