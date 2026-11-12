@@ -19,7 +19,13 @@ import {
   setConfig,
   stats,
 } from "@/lib/db";
-import { getTelegramConfig, guardarTelegramConfig, probarTelegram, verificarBotTelegram } from "@/lib/telegram";
+import {
+  getTelegramConfig,
+  guardarTelegramConfig,
+  probarTelegram,
+  verificarBotTelegram,
+  registrarWebhookTelegram,
+} from "@/lib/telegram";
 import { guardarArchivo } from "@/lib/uploads";
 import { iniciales, formatearFecha } from "@/lib/utils";
 import type { Dedicatoria, Familia, Persona, SanctuaryStats } from "@/types";
@@ -61,6 +67,7 @@ export default function Admin() {
 
   const [telegramToken, setTelegramToken] = useState<string>(() => getTelegramConfig().token);
   const [telegramChatId, setTelegramChatId] = useState<string>(() => getTelegramConfig().chatId);
+  const [openrouterKey, setOpenrouterKey] = useState<string>(() => getConfig("openrouter_api_key") || "");
   const [telegramBotInfo, setTelegramBotInfo] = useState<{ username?: string; firstName?: string } | null>(null);
   const [probandoTelegram, setProbandoTelegram] = useState(false);
   const [guardandoTelegram, setGuardandoTelegram] = useState(false);
@@ -164,8 +171,19 @@ export default function Admin() {
     setGuardandoTelegram(true);
     try {
       guardarTelegramConfig(telegramToken, telegramChatId);
+      setConfig("openrouter_api_key", openrouterKey.trim() || null);
       window.dispatchEvent(new Event("panteon:db-updated"));
-      toast("Configuración del Bot de Telegram guardada correctamente.", "success");
+
+      if (telegramToken.trim()) {
+        const hookRes = await registrarWebhookTelegram(telegramToken);
+        if (hookRes.ok) {
+          toast("Configuración guardada, IA conectada y Webhook vinculado ⚡", "success");
+        } else {
+          toast("Configuración guardada. (Nota Webhook: " + (hookRes.error || "en proceso") + ")", "warning");
+        }
+      } else {
+        toast("Configuración del Bot de Telegram guardada.", "success");
+      }
     } finally {
       setGuardandoTelegram(false);
     }
@@ -467,6 +485,23 @@ export default function Admin() {
                 El ID numérico del usuario o grupo de Telegram donde llegarán los mensajes.
               </p>
             </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-pink-950/20 border border-pink-500/25">
+            <label className="block text-[11px] uppercase tracking-wider text-pink-300 font-medium mb-1.5 flex items-center justify-between">
+              <span>✨ Inteligencia Artificial (OpenRouter · Gemini 2.5 Flash)</span>
+              <span className="text-[10px] text-emerald-400 font-mono">Activo</span>
+            </label>
+            <input
+              type="password"
+              value={openrouterKey}
+              onChange={(e) => setOpenrouterKey(e.target.value)}
+              placeholder="sk-or-v1-..."
+              className="w-full bg-stone-950/70 border border-pink-500/30 focus:border-pink-400 rounded-xl px-3.5 py-2.5 text-xs text-stone-100 placeholder:text-stone-600 outline-none transition-colors font-mono"
+            />
+            <p className="mt-1.5 text-[11px] text-stone-400">
+              Permite que el bot converse con los familiares, responda preguntas sobre las almas y ayude a redactar condolencias y epitafios con IA.
+            </p>
           </div>
 
           <div className="p-3.5 rounded-xl bg-stone-950/60 border border-white/10 text-xs text-stone-400 leading-relaxed">

@@ -75,15 +75,31 @@ export async function probarTelegram(customToken?: string, customChatId?: string
 export async function registrarWebhookTelegram(customToken?: string, webhookUrl?: string): Promise<{ ok: boolean; error?: string }> {
   const cfg = getTelegramConfig();
   const token = (customToken !== undefined ? customToken : cfg.token).trim();
-  const url = (webhookUrl || `${cfg.appUrl}/api/telegram`).trim();
+
+  let targetUrl = (webhookUrl || "").trim();
+  if (!targetUrl) {
+    if (cfg.appUrl && cfg.appUrl.startsWith("https://")) {
+      targetUrl = `${cfg.appUrl}/api/telegram`;
+    } else {
+      targetUrl = "https://obituariocloud.vercel.app/api/telegram";
+    }
+  }
 
   if (!token) return { ok: false, error: "Falta el token del bot" };
-  if (!url || !url.startsWith("https://")) {
-    return { ok: false, error: "La URL debe comenzar con HTTPS (ej: https://obituariocloud.vercel.app/api/telegram)" };
+  if (!targetUrl.startsWith("https://")) {
+    return { ok: false, error: "La URL del webhook debe comenzar con HTTPS" };
   }
 
   try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook?url=${encodeURIComponent(url)}`);
+    const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: targetUrl,
+        allowed_updates: ["message", "callback_query"],
+        drop_pending_updates: false,
+      }),
+    });
     const data = await res.json().catch(() => ({}));
     if (data.ok) return { ok: true };
     return { ok: false, error: data.description || "Error al registrar webhook" };

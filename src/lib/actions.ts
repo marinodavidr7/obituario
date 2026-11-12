@@ -197,11 +197,10 @@ export async function solicitarInscripcion(formData: FormData): Promise<void> {
     fecha_solicitud: fechaSolicitud,
   });
 
-  try {
-    await notificarSolicitudTelegram(data.id);
-  } catch (err) {
-    console.warn("Telegram notification:", err);
-  }
+  // Notificación a Telegram en segundo plano para que la navegación sea instantánea
+  notificarSolicitudTelegram(data.id).catch((err) => {
+    console.warn("[Telegram] Error notificando solicitud:", err);
+  });
 
   navigate(`/inscribir/gracias?id=${data.id}&nombre=${encodeURIComponent(data.nombre)}`);
 }
