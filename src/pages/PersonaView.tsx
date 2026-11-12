@@ -465,8 +465,7 @@ export default function PersonaView({ id }: { id: string }) {
           )}
           {p.videos.length > 0 && (
             <section>
-              <Titulo>Registros en Vídeo ({p.videos.length})</Titulo>
-              <Videos videos={p.videos} />
+              <Videos videos={p.videos} nombre={p.nombre} />
             </section>
           )}
           <Altar
