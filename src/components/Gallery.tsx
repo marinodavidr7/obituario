@@ -50,6 +50,7 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
                 src={src}
                 alt={`Recuerdo de ${nombre} ${i + 1}`}
                 loading="lazy"
+                decoding="async"
                 className={`w-full h-full object-cover ${isGif ? "" : "grayscale-[30%]"} group-hover:grayscale-0 group-hover:scale-105 transition duration-300`}
               />
               {isGif && (

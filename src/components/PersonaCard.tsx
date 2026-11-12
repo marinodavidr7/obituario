@@ -19,6 +19,7 @@ export default function PersonaCard({ p }: { p: Persona }) {
             className="portrait-inner object-cover w-full h-full"
             style={{ objectPosition: p.foto_pos || "50% 20%" }}
             loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="portrait-inner font-serif text-2xl sm:text-4xl text-gold/80">
