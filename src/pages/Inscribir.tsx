@@ -19,7 +19,7 @@ export default function Inscribir() {
   };
 
   return (
-    <section className="fade-enter pt-3 sm:pt-8 pb-12 w-full max-w-7xl mx-auto">
+    <section className="fade-enter pt-3 sm:pt-8 pb-12 w-full max-w-[1720px] 2xl:max-w-[1920px] mx-auto px-1 sm:px-4">
       <div className="text-center pb-6 mb-6 border-b border-white/10">
         <Link
           href="/"

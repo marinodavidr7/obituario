@@ -259,7 +259,7 @@ export default function Admin() {
   ];
 
   return (
-    <section className="fade-enter pt-3 sm:pt-10 pb-24 w-full max-w-7xl mx-auto">
+    <section className="fade-enter pt-3 sm:pt-10 pb-24 w-full max-w-[1720px] 2xl:max-w-[1920px] mx-auto px-1 sm:px-4">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-6 border-b border-white/10">
         <div>
           <span className="text-[10px] uppercase tracking-[0.3em] text-gold block">Panel de cuidado</span>

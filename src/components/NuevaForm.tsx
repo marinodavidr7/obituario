@@ -186,7 +186,7 @@ export default function NuevaForm({
     <form
       action={action}
       onSubmit={() => setEnviando(true)}
-      className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.35fr)_420px] xl:grid-cols-[minmax(0,1.6fr)_460px] 2xl:grid-cols-[minmax(0,1.75fr)_480px] gap-6 lg:gap-8 xl:gap-10 items-start"
+      className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_380px] xl:grid-cols-[minmax(0,1.65fr)_440px] 2xl:grid-cols-[minmax(0,1.8fr)_480px] gap-6 lg:gap-8 xl:gap-10 items-start w-full"
     >
       {isEditing && <input type="hidden" name="id" value={personaInicial!.id} />}
       <div className="space-y-6 min-w-0">
