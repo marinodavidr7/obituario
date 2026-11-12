@@ -562,6 +562,61 @@ export function upsertFamilia(f: { id: string; apellido: string; lema?: string |
   }
 }
 
+export async function actualizarFamilia(
+  id: string,
+  apellido: string,
+  lema?: string | null
+): Promise<{ success: boolean; error?: string }> {
+  const apellidoLimpio = apellido.trim();
+  if (!apellidoLimpio) return { success: false, error: "El apellido familiar no puede estar vacío" };
+
+  const idx = cachedFamilias.findIndex((item) => item.id === id);
+  let famActualizada: Familia;
+
+  if (idx >= 0) {
+    famActualizada = {
+      ...cachedFamilias[idx],
+      apellido: apellidoLimpio,
+      lema: lema !== undefined ? (lema?.trim() || null) : cachedFamilias[idx].lema,
+    };
+    cachedFamilias[idx] = famActualizada;
+  } else {
+    famActualizada = {
+      id,
+      apellido: apellidoLimpio,
+      lema: lema?.trim() || null,
+      orden: cachedFamilias.length + 1,
+    };
+    cachedFamilias.push(famActualizada);
+  }
+
+  saveState();
+
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from("familias")
+        .upsert({
+          id,
+          apellido: apellidoLimpio,
+          lema: famActualizada.lema,
+        });
+
+      if (error) {
+        console.warn("[db] Error actualizando familia en Supabase:", error);
+        return { success: false, error: error.message };
+      }
+    } catch (e: any) {
+      console.warn("[db] Excepción actualizando familia en Supabase:", e);
+      return { success: false, error: e.message };
+    }
+  }
+
+  broadcastFamiliaActualizada(famActualizada);
+  window.dispatchEvent(new Event("panteon:db-updated"));
+  return { success: true };
+}
+
 const SUPABASE_PERSONA_COLUMNS = new Set([
   "id",
   "familia_id",

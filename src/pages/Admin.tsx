@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "@/components/Link";
 import ConfirmModal from "@/components/ConfirmModal";
+import EditarFamiliaModal from "@/components/EditarFamiliaModal";
 import ColorPickerGrid from "@/components/ColorPickerGrid";
 import { useToast } from "@/components/toast";
 import { loginAdmin, logoutAdmin, useAdmin } from "@/lib/auth";
@@ -51,6 +52,7 @@ export default function Admin() {
   const closeConfirm = () => setConfirmState((prev) => ({ ...prev, open: false }));
 
   const [familias, setFamilias] = useState<(Familia & { total: number; velas: number; flores: number; fotos: string[] })[]>([]);
+  const [familiaAEditar, setFamiliaAEditar] = useState<Familia | null>(null);
   const [dedicatorias, setDedicatorias] = useState<(Dedicatoria & { persona_nombre: string })[]>([]);
   const [solicitudes, setSolicitudes] = useState<(Persona & { familia_apellido: string })[]>([]);
   const [s, setStats] = useState<SanctuaryStats>({ almas: 0, familias: 0, velas: 0, flores: 0, visitas: 0 });
@@ -735,17 +737,40 @@ export default function Admin() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mt-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-10 mb-4 pb-2 border-b border-white/10">
+        <div>
+          <h3 className="font-serif text-xl sm:text-2xl text-stone-100 flex items-center gap-2">
+            <span>🏛️</span>
+            <span>Mausoleos Familiares ({familias.length})</span>
+          </h3>
+          <p className="text-xs text-stone-400 mt-0.5">
+            Puedes editar el apellido y lema de cualquier familia en cualquier momento.
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {familias.map((f) => {
           const personas = listPersonas(f.id);
           return (
             <div key={f.id} className="rounded-2xl border border-white/10 bg-stone-900/50 overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-gradient-to-r from-gold/[0.07] to-transparent">
-                <div>
-                  <h2 className="font-serif text-2xl text-gold-soft">{f.apellido}</h2>
-                  <p className="text-xs italic text-stone-400">{f.lema}</p>
+                <div className="flex-1 min-w-0 pr-3">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="font-serif text-2xl text-gold-soft truncate">{f.apellido}</h2>
+                    <button
+                      type="button"
+                      onClick={() => setFamiliaAEditar(f)}
+                      className="px-2.5 py-0.5 rounded-full border border-gold/40 hover:border-gold/70 bg-gold/10 hover:bg-gold/20 text-gold-soft text-[11px] uppercase tracking-wider transition-all active:scale-90 flex items-center gap-1 cursor-pointer shrink-0"
+                      title={`Editar apellido familiar ${f.apellido}`}
+                    >
+                      <span>✏️</span>
+                      <span>Editar</span>
+                    </button>
+                  </div>
+                  <p className="text-xs italic text-stone-400 truncate">{f.lema || "Sin lema asignado"}</p>
                 </div>
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-2.5 shrink-0">
                   <Link
                     href={`/familia/${f.id}`}
                     className="text-[10px] uppercase tracking-[0.2em] text-stone-400 hover:text-gold-soft"
@@ -923,6 +948,16 @@ export default function Admin() {
         message={confirmState.message}
         onConfirm={confirmState.onConfirm}
         onCancel={closeConfirm}
+      />
+
+      {/* Modal para editar apellidos y lemas familiares */}
+      <EditarFamiliaModal
+        open={familiaAEditar !== null}
+        familia={familiaAEditar}
+        onClose={() => setFamiliaAEditar(null)}
+        onSaved={() => {
+          refreshData();
+        }}
       />
     </section>
   );
