@@ -237,7 +237,7 @@ export async function crearPersona(formData: FormData): Promise<void> {
 export async function editarPersona(id: string, formData: FormData): Promise<void> {
   const data = await procesarPersonaFormData(formData);
 
-  await updatePersona({
+  const res = await updatePersona({
     id,
     familia_id: data.familiaId,
     nombre: data.nombre,
@@ -260,6 +260,10 @@ export async function editarPersona(id: string, formData: FormData): Promise<voi
     solicitante: data.solicitante,
     contacto: data.contacto,
   });
+
+  if (!res.success) {
+    throw new Error(res.error?.message || res.error || "Error al actualizar ser querido");
+  }
 
   navigate("/admin");
 }

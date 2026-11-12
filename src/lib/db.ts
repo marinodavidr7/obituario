@@ -653,51 +653,58 @@ export async function insertPersona(p: Omit<Persona, "visitas" | "velas" | "flor
 }
 
 export async function updatePersona(p: Omit<Persona, "visitas" | "velas" | "flores">): Promise<{ success: boolean; error?: any }> {
-  const idx = cachedPersonas.findIndex((x) => x.id === p.id);
+  let idx = cachedPersonas.findIndex((x) => x.id === p.id);
+  const actual = idx >= 0 ? cachedPersonas[idx] : null;
+  const finalColor = p.color !== undefined ? p.color : actual?.color ?? null;
+  setStoredSoulColor(p.id, finalColor);
+
+  const updated: Persona = {
+    visitas: actual?.visitas ?? 0,
+    velas: actual?.velas ?? 0,
+    flores: actual?.flores ?? 0,
+    orden: actual?.orden ?? cachedPersonas.length + 1,
+    ...actual,
+    ...p,
+    foto: p.foto !== undefined ? p.foto : (actual?.foto ?? null),
+    foto_pos: p.foto_pos !== undefined ? p.foto_pos : (actual?.foto_pos ?? "50% 50%"),
+    estado: p.estado !== undefined ? p.estado : (actual?.estado ?? "publicado"),
+    solicitante: p.solicitante !== undefined ? p.solicitante : (actual?.solicitante ?? null),
+    contacto: p.contacto !== undefined ? p.contacto : (actual?.contacto ?? null),
+    fecha_solicitud: p.fecha_solicitud !== undefined ? p.fecha_solicitud : (actual?.fecha_solicitud ?? new Date().toISOString()),
+    musica: p.musica !== undefined ? p.musica : (actual?.musica ?? null),
+    musica_titulo: p.musica_titulo !== undefined ? p.musica_titulo : (actual?.musica_titulo ?? null),
+    musicas_rotacion: p.musicas_rotacion !== undefined ? p.musicas_rotacion : (actual?.musicas_rotacion ?? []),
+    musicas_inicio: p.musicas_inicio !== undefined ? p.musicas_inicio : (actual?.musicas_inicio ?? null),
+    color: finalColor,
+    datos: p.datos !== undefined ? p.datos : (actual?.datos || []),
+    galeria: p.galeria !== undefined ? p.galeria : (actual?.galeria || []),
+    videos: p.videos !== undefined ? p.videos : (actual?.videos || []),
+  };
+
   if (idx >= 0) {
-    const actual = cachedPersonas[idx];
-    const finalColor = p.color !== undefined ? p.color : actual.color ?? null;
-    setStoredSoulColor(p.id, finalColor);
-
-    cachedPersonas[idx] = {
-      ...actual,
-      ...p,
-      foto: p.foto !== undefined ? p.foto : actual.foto,
-      foto_pos: p.foto_pos !== undefined ? p.foto_pos : (actual.foto_pos ?? "50% 50%"),
-      estado: p.estado !== undefined ? p.estado : (actual.estado ?? "publicado"),
-      solicitante: p.solicitante !== undefined ? p.solicitante : actual.solicitante,
-      contacto: p.contacto !== undefined ? p.contacto : actual.contacto,
-      fecha_solicitud: p.fecha_solicitud !== undefined ? p.fecha_solicitud : actual.fecha_solicitud,
-      musica: p.musica !== undefined ? p.musica : actual.musica,
-      musica_titulo: p.musica_titulo !== undefined ? p.musica_titulo : actual.musica_titulo,
-      musicas_rotacion: p.musicas_rotacion !== undefined ? p.musicas_rotacion : (actual.musicas_rotacion ?? []),
-      musicas_inicio: p.musicas_inicio !== undefined ? p.musicas_inicio : actual.musicas_inicio,
-      color: finalColor,
-      datos: p.datos !== undefined ? p.datos : (actual.datos || []),
-      galeria: p.galeria !== undefined ? p.galeria : (actual.galeria || []),
-      videos: p.videos !== undefined ? p.videos : (actual.videos || []),
-    };
-    saveState();
-    broadcastPersonaActualizada(cachedPersonas[idx]);
-
-    if (isSupabaseConfigured) {
-      const payload = toSupabasePersona(cachedPersonas[idx]);
-      try {
-        const { error } = await supabase.from("personas").upsert(payload);
-        if (error) {
-          console.error("[Supabase] Error al actualizar persona en Supabase:", error);
-          return { success: false, error };
-        }
-      } catch (err) {
-        console.error("[Supabase] Excepción al actualizar persona en Supabase:", err);
-        return { success: false, error: err };
-      }
-    }
-
-    return { success: true };
+    cachedPersonas[idx] = updated;
+  } else {
+    cachedPersonas.push(updated);
   }
 
-  return { success: false, error: "Persona no encontrada" };
+  saveState();
+  broadcastPersonaActualizada(updated);
+
+  if (isSupabaseConfigured) {
+    const payload = toSupabasePersona(updated);
+    try {
+      const { error } = await supabase.from("personas").upsert(payload);
+      if (error) {
+        console.error("[Supabase] Error al actualizar persona en Supabase:", error);
+        return { success: false, error };
+      }
+    } catch (err) {
+      console.error("[Supabase] Excepción al actualizar persona en Supabase:", err);
+      return { success: false, error: err };
+    }
+  }
+
+  return { success: true };
 }
 
 export async function deletePersona(id: string): Promise<{ success: boolean; error?: string }> {

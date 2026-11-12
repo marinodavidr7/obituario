@@ -125,7 +125,13 @@ export default function AdminEditar({ id }: { id: string }) {
         </div>
       </div>
 
-      <NuevaForm familias={familias} action={handleSubmit} error={error} personaInicial={persona} />
+      <NuevaForm
+        key={`${persona.id}-${persona.videos?.length || 0}`}
+        familias={familias}
+        action={handleSubmit}
+        error={error}
+        personaInicial={persona}
+      />
 
       {/* Zona de Peligro / Borrado directo */}
       <div className="mt-12 p-6 rounded-2xl border border-rose-500/30 bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -142,7 +142,7 @@ export default function NuevaForm({
     if (personaInicial?.videos && personaInicial.videos.length > 0) {
       setVideos(personaInicial.videos.map((v) => ({ t: v.titulo, u: v.url })));
     }
-  }, [personaInicial?.videos]);
+  }, [JSON.stringify(personaInicial?.videos)]);
 
   const fotoSubidaUrl = useObjectUrls(fotoFile)[0];
   const fotoPrev = eliminarFoto ? "" : (fotoSubidaUrl || fotoUrl.trim());
@@ -892,8 +892,9 @@ export default function NuevaForm({
           </div>
         ) : (
           <button
+            type="submit"
             disabled={enviando}
-            className="w-full rounded-full bg-gold/25 hover:bg-gold/35 disabled:opacity-60 border border-gold/70 py-3.5 text-[12px] uppercase tracking-[0.22em] text-gold-soft transition-colors"
+            className="w-full rounded-full bg-gold/25 hover:bg-gold/35 disabled:opacity-60 border border-gold/70 py-3.5 text-[12px] uppercase tracking-[0.22em] text-gold-soft transition-colors cursor-pointer"
           >
             {enviando ? "Guardando cambios…" : (isEditing ? "Guardar Cambios" : "Guardar en el Obituario")}
           </button>
