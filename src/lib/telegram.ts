@@ -79,7 +79,7 @@ export async function registrarWebhookTelegram(customToken?: string, webhookUrl?
 
   if (!token) return { ok: false, error: "Falta el token del bot" };
   if (!url || !url.startsWith("https://")) {
-    return { ok: false, error: "La URL debe comenzar con HTTPS (ej: https://ariocloud.vercel.app/api/telegram)" };
+    return { ok: false, error: "La URL debe comenzar con HTTPS (ej: https://obituariocloud.vercel.app/api/telegram)" };
   }
 
   try {

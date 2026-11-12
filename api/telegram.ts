@@ -13,7 +13,7 @@ async function getSupabase() {
 async function getBotConfig(supabase: any) {
   let token = process.env.VITE_TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
   let chatId = process.env.VITE_TELEGRAM_CHAT_ID || "";
-  let siteUrl = "https://ariocloud.vercel.app";
+  let siteUrl = "https://obituariocloud.vercel.app";
 
   try {
     const { data } = await supabase.from("config").select("clave, valor");
