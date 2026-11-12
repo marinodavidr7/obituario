@@ -21,7 +21,7 @@ import {
 } from "@/lib/db";
 import { getTelegramConfig, guardarTelegramConfig, probarTelegram, verificarBotTelegram } from "@/lib/telegram";
 import { guardarArchivo } from "@/lib/uploads";
-import { iniciales } from "@/lib/utils";
+import { iniciales, formatearFecha } from "@/lib/utils";
 import type { Dedicatoria, Familia, Persona, SanctuaryStats } from "@/types";
 
 const pill =
@@ -840,9 +840,9 @@ export default function Admin() {
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3.5 hover:bg-white/[0.02] transition-colors"
               >
                 <div className="min-w-0 flex-1">
-                  <p className="font-serif italic text-sm text-stone-200">“{d.texto}”</p>
+                  <p className="font-sans text-sm text-stone-100 font-normal leading-relaxed">“{d.texto}”</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-stone-400">
-                    <span className="text-gold/90 font-medium">— {d.autor}</span>
+                    <span className="text-pink-300 font-medium">— {d.autor}</span>
                     <span>·</span>
                     <span>
                       Para:{" "}
@@ -854,7 +854,7 @@ export default function Admin() {
                       </Link>
                     </span>
                     <span>·</span>
-                    <span className="text-stone-500">{d.fecha}</span>
+                    <span className="text-stone-400 font-sans">{formatearFecha(d.fecha)}</span>
                   </div>
                 </div>
                 <button

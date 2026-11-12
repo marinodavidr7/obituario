@@ -17,13 +17,23 @@ if (import.meta.env.DEV && typeof window !== "undefined" && "serviceWorker" in n
   });
 }
 
-// Registrar Service Worker en producción para PWA offline de forma nativa y robusta
+// Registrar Service Worker en producción para PWA offline de forma nativa y robusta con actualización automática
 if (import.meta.env.PROD && typeof window !== "undefined" && "serviceWorker" in navigator) {
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!refreshing) {
+      refreshing = true;
+      window.location.reload();
+    }
+  });
+
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => {
         console.log("[PWA Obituario] Service Worker registrado:", reg.scope);
+        // Buscar actualizaciones de inmediato cada vez que se abre la app
+        reg.update();
       })
       .catch((err) => {
         console.warn("[PWA Obituario] Registro de Service Worker:", err);

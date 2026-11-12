@@ -5,6 +5,7 @@ import type { Dedicatoria } from "@/types";
 import { addDedicatoria, deleteDedicatoria } from "@/lib/db";
 import { validarDedicatoria } from "@/lib/moderacion";
 import { triggerHaptic } from "@/lib/haptics";
+import { formatearFecha } from "@/lib/utils";
 
 export default function Dedicatorias({
   personaId,
@@ -185,17 +186,26 @@ export default function Dedicatorias({
           </p>
         )}
         {lista.map((r) => (
-          <article key={r.id} className="p-3.5 sm:p-4 rounded-xl bg-stone-950/60 border border-white/5 group">
-            <p className="font-serif italic text-sm sm:text-base text-stone-200 leading-relaxed">“{r.texto}”</p>
-            <div className="mt-2.5 flex items-center justify-between text-[10px] sm:text-[11px] text-stone-400">
-              <span className="text-gold/90 font-medium">— {r.autor}</span>
+          <article
+            key={r.id}
+            className="p-4 sm:p-5 rounded-2xl bg-stone-950/70 border border-white/10 hover:border-pink-500/25 shadow-lg backdrop-blur-sm transition-all group flex flex-col justify-between"
+          >
+            <p className="font-sans text-[14.5px] sm:text-[15.5px] text-stone-100 font-normal leading-relaxed tracking-normal select-text break-words">
+              “{r.texto}”
+            </p>
+            <div className="mt-3.5 pt-2.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
+              <span className="text-pink-300 font-medium tracking-wide">
+                — {r.autor}
+              </span>
               <div className="flex items-center gap-3">
-                <span>{r.fecha}</span>
+                <span className="text-stone-400 text-[11px] sm:text-xs font-sans">
+                  {formatearFecha(r.fecha)}
+                </span>
                 {esAdmin && (
                   <button
                     type="button"
                     onClick={() => borrar(r.id)}
-                    className="text-[10px] uppercase tracking-wider text-rose-400/80 hover:text-rose-300 border border-rose-500/20 hover:border-rose-400/50 rounded-full px-2.5 py-0.5 active:scale-90 transition-transform"
+                    className="text-[10px] uppercase tracking-wider text-rose-400 hover:text-rose-200 border border-rose-500/30 hover:border-rose-400/60 rounded-full px-2.5 py-0.5 active:scale-95 transition-all cursor-pointer"
                     title="Eliminar dedicatoria"
                   >
                     Eliminar

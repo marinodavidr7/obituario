@@ -79,3 +79,56 @@ export function embedVideo(url: string): { tipo: "youtube" | "tiktok" | "otro"; 
   } catch {}
   return { tipo: "otro", embed: null };
 }
+
+/**
+ * Formatea fechas crudas (ISO timestamps como "2026-11-12T00:00:00+00:00", timestamps numéricos, etc.)
+ * a un formato humano, cálido y elegante en español (ej. "12 de noviembre de 2026").
+ */
+export function formatearFecha(fechaRaw: string | number | undefined | null): string {
+  if (!fechaRaw) return "";
+  const trimmed = String(fechaRaw).trim();
+
+  // Si tiene formato YYYY-MM-DD o ISO string (ej. "2026-11-12T00:00:00+00:00" o "2026-11-12")
+  const isoMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s].*)?$/);
+  if (isoMatch) {
+    const year = parseInt(isoMatch[1], 10);
+    const month = parseInt(isoMatch[2], 10) - 1;
+    const day = parseInt(isoMatch[3], 10);
+    const date = new Date(Date.UTC(year, month, day));
+    return date.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  }
+
+  // Si es un timestamp numérico (ej. 1794497701489 o "1794497701489")
+  if (/^\d{10,13}$/.test(trimmed)) {
+    const d = new Date(parseInt(trimmed, 10));
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    }
+  }
+
+  // Si ya contiene un mes legible en español
+  if (/(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  // Intento general con Date
+  const parsed = new Date(trimmed);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  }
+
+  return trimmed;
+}
