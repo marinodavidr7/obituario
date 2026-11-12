@@ -342,12 +342,12 @@ export default function NuevaForm({
         <Card n="IV" titulo="Álbum de recuerdos" nota="Sube archivos o pega enlaces">
           <div className="grid md:grid-cols-2 gap-5">
             <div>
-              <label className={lab}>Subir fotos desde tu equipo</label>
-              <input ref={galInput} type="file" name="galeria_archivos" accept="image/*" multiple hidden onChange={() => pick(galInput.current, galFiles, setGalFiles, true)} />
-              <button type="button" onClick={() => galInput.current?.click()} className="w-full rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 py-7 text-center transition-colors">
+              <label className={lab}>Subir fotos o GIFs desde tu equipo</label>
+              <input ref={galInput} type="file" name="galeria_archivos" accept="image/*,.gif" multiple hidden onChange={() => pick(galInput.current, galFiles, setGalFiles, true)} />
+              <button type="button" onClick={() => galInput.current?.click()} className="w-full rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 py-7 text-center transition-colors cursor-pointer">
                 <span className="block text-2xl text-gold">⬆</span>
-                <span className="block text-sm text-stone-200 mt-1">Elegir fotos</span>
-                <span className="block text-[11px] text-stone-500">JPG, PNG, WebP · hasta 10 MB cada una</span>
+                <span className="block text-sm text-stone-200 mt-1">Elegir fotos o GIFs animados</span>
+                <span className="block text-[11px] text-stone-500">JPG, PNG, WebP, GIF animado · se reproducen solos</span>
               </button>
             </div>
             <div>
@@ -772,16 +772,25 @@ export default function NuevaForm({
               ref={fotoInput}
               type="file"
               name="foto_archivo"
-              accept="image/*"
+              accept="image/*,.gif"
               hidden
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) {
-                  setRawOriginalFile(f);
-                  const tempUrl = URL.createObjectURL(f);
-                  setCropModalSrc(tempUrl);
-                  setShowCropModal(true);
-                  setEliminarFoto(false);
+                  const isGif = f.type === "image/gif" || f.name.toLowerCase().endsWith(".gif");
+                  if (isGif) {
+                    setFotoFile([f]);
+                    setEliminarFoto(false);
+                    setFotoUrl("");
+                    setRawOriginalFile(f);
+                    toast("GIF animado añadido: se reproducirá en movimiento continuo", "info");
+                  } else {
+                    setRawOriginalFile(f);
+                    const tempUrl = URL.createObjectURL(f);
+                    setCropModalSrc(tempUrl);
+                    setShowCropModal(true);
+                    setEliminarFoto(false);
+                  }
                 }
               }}
             />

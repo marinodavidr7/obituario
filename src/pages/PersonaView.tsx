@@ -328,7 +328,7 @@ export default function PersonaView({ id }: { id: string }) {
                 src={p.foto}
                 alt={`Retrato de ${p.nombre}`}
                 style={{ objectPosition: p.foto_pos || "50% 20%" }}
-                className="w-full h-full object-cover grayscale-[20%] contrast-105"
+                className={`w-full h-full object-cover ${p.foto.toLowerCase().includes(".gif") ? "" : "grayscale-[20%]"} contrast-105`}
               />
             ) : (
               <span className="font-serif text-5xl sm:text-6xl text-gold/80">{iniciales(p.nombre)}</span>

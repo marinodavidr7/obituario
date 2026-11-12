@@ -32,26 +32,34 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
   return (
     <>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
-        {fotos.map((src, i) => (
-          <button
-            key={src}
-            type="button"
-            onClick={() => {
-              triggerHaptic("light");
-              setOpen(i);
-            }}
-            aria-label={`Ampliar fotografía ${i + 1}`}
-            className="aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-gold/60 active:scale-95 group bg-black transition-transform"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={src}
-              alt={`Recuerdo de ${nombre} ${i + 1}`}
-              loading="lazy"
-              className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 group-hover:scale-105 transition duration-300"
-            />
-          </button>
-        ))}
+        {fotos.map((src, i) => {
+          const isGif = src.toLowerCase().includes(".gif");
+          return (
+            <button
+              key={`${src}-${i}`}
+              type="button"
+              onClick={() => {
+                triggerHaptic("light");
+                setOpen(i);
+              }}
+              aria-label={`Ampliar fotografía o GIF ${i + 1}`}
+              className="relative aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-gold/60 active:scale-95 group bg-black transition-transform cursor-pointer"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={src}
+                alt={`Recuerdo de ${nombre} ${i + 1}`}
+                loading="lazy"
+                className={`w-full h-full object-cover ${isGif ? "" : "grayscale-[30%]"} group-hover:grayscale-0 group-hover:scale-105 transition duration-300`}
+              />
+              {isGif && (
+                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-sans font-bold bg-gold/90 text-stone-950 uppercase tracking-wider shadow pointer-events-none">
+                  GIF
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {open !== null && (
