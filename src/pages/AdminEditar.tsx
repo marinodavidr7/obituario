@@ -5,6 +5,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import { useAdmin } from "@/lib/auth";
 import { deletePersona, getPersona, listFamilias } from "@/lib/db";
+import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { editarPersona } from "@/lib/actions";
 import { navigate } from "@/lib/router";
 import type { Persona } from "@/types";
@@ -18,8 +19,32 @@ export default function AdminEditar({ id }: { id: string }) {
   const familias = listFamilias().map((f) => ({ id: f.id, apellido: f.apellido }));
 
   useEffect(() => {
-    const p = getPersona(id);
-    setPersona(p || null);
+    let isCancelled = false;
+    let p = getPersona(id);
+    if (!p) {
+      const decoded = decodeURIComponent(id || "");
+      if (decoded !== id) p = getPersona(decoded);
+    }
+    if (p) {
+      setPersona(p);
+    }
+
+    if (isSupabaseConfigured) {
+      supabase
+        .from("personas")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data && !isCancelled) {
+            setPersona(data as any);
+          }
+        });
+    }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [id]);
 
   if (!authed) {

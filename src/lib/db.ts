@@ -562,7 +562,50 @@ export function upsertFamilia(f: { id: string; apellido: string; lema?: string |
   }
 }
 
-export function insertPersona(p: Omit<Persona, "visitas" | "velas" | "flores">): void {
+const SUPABASE_PERSONA_COLUMNS = new Set([
+  "id",
+  "familia_id",
+  "nombre",
+  "apodo",
+  "anios",
+  "fechas",
+  "epitafio",
+  "foto",
+  "foto_pos",
+  "bio",
+  "datos",
+  "galeria",
+  "videos",
+  "visitas",
+  "velas",
+  "flores",
+  "orden",
+  "estado",
+  "solicitante",
+  "contacto",
+  "fecha_solicitud",
+  "musica",
+  "musica_titulo",
+  "musicas_rotacion",
+  "musicas_inicio",
+  "color",
+]);
+
+function toSupabasePersona(p: any): any {
+  const obj: any = {};
+  for (const key of Object.keys(p)) {
+    if (SUPABASE_PERSONA_COLUMNS.has(key)) {
+      obj[key] = p[key];
+    }
+  }
+  if (!Array.isArray(obj.datos)) obj.datos = [];
+  if (!Array.isArray(obj.galeria)) obj.galeria = [];
+  if (!Array.isArray(obj.videos)) obj.videos = [];
+  if (!Array.isArray(obj.musicas_rotacion)) obj.musicas_rotacion = [];
+  return obj;
+}
+
+export async function insertPersona(p: Omit<Persona, "visitas" | "velas" | "flores">): Promise<{ success: boolean; error?: any }> {
   const nueva: Persona = {
     ...p,
     visitas: 0,
@@ -578,9 +621,9 @@ export function insertPersona(p: Omit<Persona, "visitas" | "velas" | "flores">):
     musicas_rotacion: p.musicas_rotacion ?? [],
     musicas_inicio: p.musicas_inicio ?? null,
     color: p.color ?? null,
-    datos: p.datos || [],
-    galeria: p.galeria || [],
-    videos: p.videos || [],
+    datos: Array.isArray(p.datos) ? p.datos : [],
+    galeria: Array.isArray(p.galeria) ? p.galeria : [],
+    videos: Array.isArray(p.videos) ? p.videos : [],
     orden: cachedPersonas.length + 1,
   };
 
@@ -593,22 +636,23 @@ export function insertPersona(p: Omit<Persona, "visitas" | "velas" | "flores">):
   broadcastPersonaActualizada(nueva);
 
   if (isSupabaseConfigured) {
-    supabase.from("personas").insert([nueva]).then(({ error }) => {
+    const payload = toSupabasePersona(nueva);
+    try {
+      const { error } = await supabase.from("personas").insert([payload]);
       if (error) {
-        const msg = (error.message || "").toLowerCase();
-        if (msg.includes("color") || error.code === "PGRST204" || error.code === "42703") {
-          console.warn("[Supabase] Tabla personas sin columna color, insertando sin ella:", error.message);
-          const { color: _c, ...sinColor } = nueva;
-          supabase.from("personas").insert([sinColor]).then();
-        } else {
-          console.error("[Supabase] Error al insertar persona:", error);
-        }
+        console.error("[Supabase] Error al insertar persona en Supabase:", error);
+        return { success: false, error };
       }
-    });
+    } catch (err) {
+      console.error("[Supabase] Excepción al insertar persona:", err);
+      return { success: false, error: err };
+    }
   }
+
+  return { success: true };
 }
 
-export function updatePersona(p: Omit<Persona, "visitas" | "velas" | "flores">): void {
+export async function updatePersona(p: Omit<Persona, "visitas" | "velas" | "flores">): Promise<{ success: boolean; error?: any }> {
   const idx = cachedPersonas.findIndex((x) => x.id === p.id);
   if (idx >= 0) {
     const actual = cachedPersonas[idx];
@@ -637,20 +681,23 @@ export function updatePersona(p: Omit<Persona, "visitas" | "velas" | "flores">):
     broadcastPersonaActualizada(cachedPersonas[idx]);
 
     if (isSupabaseConfigured) {
-      supabase.from("personas").upsert(cachedPersonas[idx]).then(({ error }) => {
+      const payload = toSupabasePersona(cachedPersonas[idx]);
+      try {
+        const { error } = await supabase.from("personas").upsert(payload);
         if (error) {
-          const msg = (error.message || "").toLowerCase();
-          if (msg.includes("color") || error.code === "PGRST204" || error.code === "42703") {
-            console.warn("[Supabase] Tabla personas sin columna color, guardando sin ella:", error.message);
-            const { color: _c, ...sinColor } = cachedPersonas[idx];
-            supabase.from("personas").upsert(sinColor).then();
-          } else {
-            console.error("[Supabase] Error al actualizar persona en Supabase:", error);
-          }
+          console.error("[Supabase] Error al actualizar persona en Supabase:", error);
+          return { success: false, error };
         }
-      });
+      } catch (err) {
+        console.error("[Supabase] Excepción al actualizar persona en Supabase:", err);
+        return { success: false, error: err };
+      }
     }
+
+    return { success: true };
   }
+
+  return { success: false, error: "Persona no encontrada" };
 }
 
 export async function deletePersona(id: string): Promise<{ success: boolean; error?: string }> {

@@ -98,19 +98,28 @@ export async function procesarPersonaFormData(formData: FormData) {
     .map((x) => x.trim())
     .filter(Boolean);
 
-  const enlaces = clean(
+  const rawUrls = clean(
     formData.getAll("video_url").length > 0
       ? formData.getAll("video_url")
       : formData.getAll("video_u")
   );
-  const titulos = clean(
+  const rawTitulos = clean(
     formData.getAll("video_titulo").length > 0
       ? formData.getAll("video_titulo")
       : formData.getAll("video_t")
   );
-  const videos: Video[] = enlaces
-    .map((url, i) => ({ titulo: titulos[i] || "Vídeo", url }))
-    .filter((v) => v.url);
+
+  const videos: Video[] = [];
+  for (let i = 0; i < rawUrls.length; i++) {
+    const url = (rawUrls[i] || "").trim();
+    const titulo = (rawTitulos[i] || "").trim();
+    if (url) {
+      videos.push({
+        titulo: titulo || "Vídeo",
+        url,
+      });
+    }
+  }
 
   const eliminarMusica = s("eliminar_musica") === "1";
   const musicaArchivo = formData.get("musica_archivo") as File | null;
@@ -163,7 +172,7 @@ export async function solicitarInscripcion(formData: FormData): Promise<void> {
     minute: "2-digit",
   });
 
-  insertPersona({
+  await insertPersona({
     id: data.id,
     familia_id: data.familiaId,
     nombre: data.nombre,
@@ -200,7 +209,7 @@ export async function solicitarInscripcion(formData: FormData): Promise<void> {
 export async function crearPersona(formData: FormData): Promise<void> {
   const data = await procesarPersonaFormData(formData);
 
-  insertPersona({
+  await insertPersona({
     id: data.id,
     familia_id: data.familiaId,
     nombre: data.nombre,
@@ -228,7 +237,7 @@ export async function crearPersona(formData: FormData): Promise<void> {
 export async function editarPersona(id: string, formData: FormData): Promise<void> {
   const data = await procesarPersonaFormData(formData);
 
-  updatePersona({
+  await updatePersona({
     id,
     familia_id: data.familiaId,
     nombre: data.nombre,

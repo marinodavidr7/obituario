@@ -138,6 +138,12 @@ export default function NuevaForm({
   const galInput = useRef<HTMLInputElement>(null);
   const musicaInput = useRef<HTMLInputElement>(null);
 
+  useEffect(() => {
+    if (personaInicial?.videos && personaInicial.videos.length > 0) {
+      setVideos(personaInicial.videos.map((v) => ({ t: v.titulo, u: v.url })));
+    }
+  }, [personaInicial?.videos]);
+
   const fotoSubidaUrl = useObjectUrls(fotoFile)[0];
   const fotoPrev = eliminarFoto ? "" : (fotoSubidaUrl || fotoUrl.trim());
   const fotoPos = `${posX}% ${posY}%`;
