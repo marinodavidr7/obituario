@@ -242,6 +242,12 @@ export default function FotoCropModal({
           </button>
         </div>
 
+        {imageSrc?.toLowerCase().includes(".gif") && (
+          <div className="bg-amber-500/20 border-b border-amber-500/40 px-4 py-2 text-[11px] text-amber-200 text-center">
+            ℹ️ Este archivo es un GIF animado. Si deseas que se mueva en bucle continuo, úsalo directamente desde el formulario para conservar todos los fotogramas sin aplanarlo a estático.
+          </div>
+        )}
+
         {/* Selector de tipo de marco / vista */}
         <div className="flex items-center justify-center gap-2 pt-3 pb-1 px-4">
           <button

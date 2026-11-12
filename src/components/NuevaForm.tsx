@@ -146,6 +146,10 @@ export default function NuevaForm({
 
   const fotoSubidaUrl = useObjectUrls(fotoFile)[0];
   const fotoPrev = eliminarFoto ? "" : (fotoSubidaUrl || fotoUrl.trim());
+  const isFotoGif = Boolean(
+    (rawOriginalFile && (rawOriginalFile.type === "image/gif" || rawOriginalFile.name.toLowerCase().endsWith(".gif"))) ||
+    fotoPrev.toLowerCase().includes(".gif")
+  );
   const fotoPos = `${posX}% ${posY}%`;
   const galPrev = useObjectUrls(galFiles);
   const galUrlList = galUrls.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -689,19 +693,26 @@ export default function NuevaForm({
                   className="w-24 h-32 rounded-t-[50px] rounded-b-xl overflow-hidden border-2 border-gold/50 bg-[#11151a] shadow-xl relative cursor-pointer group active:scale-95 transition-transform"
                 >
                   {fotoPrev ? (
-                    <img
-                      src={fotoPrev}
-                      alt="Vista previa arco"
-                      style={{ objectPosition: fotoPos }}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={fotoPrev}
+                        alt="Vista previa arco"
+                        style={{ objectPosition: fotoPos }}
+                        className="w-full h-full object-cover"
+                      />
+                      {isFotoGif && (
+                        <span className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded text-[8px] font-sans font-bold bg-gold text-stone-950 uppercase tracking-wider shadow">
+                          GIF
+                        </span>
+                      )}
+                    </>
                   ) : (
                     <div className="w-full h-full flex items-center justify-center font-serif text-2xl text-gold/60">
                       {iniciales(nombre)}
                     </div>
                   )}
                   <div className="absolute inset-0 bg-gold/15 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-xs text-gold-soft font-semibold backdrop-blur-[1px]">
-                    <span>✂️ Ajustar</span>
+                    <span>{isFotoGif ? "✨ GIF Animado" : "✂️ Ajustar"}</span>
                   </div>
                 </div>
               </div>
@@ -713,56 +724,94 @@ export default function NuevaForm({
                 </span>
                 <div
                   onClick={() => {
-                    if (fotoPrev) {
+                    if (fotoPrev && !isFotoGif) {
                       if (rawOriginalFile) {
                         setCropModalSrc(URL.createObjectURL(rawOriginalFile));
                       } else {
                         setCropModalSrc(fotoPrev);
                       }
                       setShowCropModal(true);
-                    } else {
+                    } else if (!fotoPrev) {
                       fotoInput.current?.click();
                     }
                   }}
-                  title={fotoPrev ? "Haz clic para ajustar la cara estilo TikTok" : "Haz clic para subir foto"}
+                  title={isFotoGif ? "GIF animado en bucle continuo" : fotoPrev ? "Haz clic para ajustar la cara estilo TikTok" : "Haz clic para subir foto"}
                   className="portrait-ring w-24 h-24 rounded-full mx-auto cursor-pointer relative shadow-xl active:scale-95 transition-transform overflow-hidden group"
                 >
                   {fotoPrev ? (
-                    <img
-                      src={fotoPrev}
-                      alt="Vista previa círculo"
-                      style={{ objectPosition: fotoPos }}
-                      className="portrait-inner object-cover w-full h-full"
-                    />
+                    <>
+                      <img
+                        src={fotoPrev}
+                        alt="Vista previa círculo"
+                        style={{ objectPosition: fotoPos }}
+                        className="portrait-inner object-cover w-full h-full"
+                      />
+                      {isFotoGif && (
+                        <span className="absolute top-2 left-2 z-10 px-1.5 py-0.5 rounded text-[8px] font-sans font-bold bg-gold text-stone-950 uppercase tracking-wider shadow">
+                          GIF
+                        </span>
+                      )}
+                    </>
                   ) : (
                     <div className="portrait-inner font-serif text-2xl text-gold/80">{iniciales(nombre)}</div>
                   )}
                   <div className="absolute inset-0 bg-gold/15 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-xs text-gold-soft font-semibold backdrop-blur-[1px]">
-                    <span>✂️ Ajustar</span>
+                    <span>{isFotoGif ? "✨ GIF" : "✂️ Ajustar"}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {fotoPrev ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (rawOriginalFile) {
-                    setCropModalSrc(URL.createObjectURL(rawOriginalFile));
-                  } else {
-                    setCropModalSrc(fotoPrev);
-                  }
-                  setShowCropModal(true);
-                }}
-                className="w-full mt-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500/25 via-gold/30 to-amber-500/25 hover:from-amber-500/35 hover:to-gold/45 border border-gold/70 text-gold-soft text-xs font-semibold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(201,168,106,0.25)] active:scale-95 transition-all cursor-pointer"
-              >
-                <span>✂️</span>
-                <span>Ajustar Foto de Perfil (Estilo TikTok)</span>
-              </button>
+              isFotoGif ? (
+                <div className="mt-3 p-3.5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-gold/20 to-stone-900 border border-gold/50 space-y-3">
+                  <div className="flex items-center justify-between text-xs text-gold-soft font-semibold">
+                    <span className="flex items-center gap-1.5">
+                      <span>✨</span>
+                      <span>GIF Animado en Perfil</span>
+                    </span>
+                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-gold text-stone-950">
+                      Bucle Activo
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-300 leading-relaxed text-left">
+                    Este GIF se reproducirá en movimiento continuo en la lápida memorial. Usa el control para encuadrar la posición del rostro:
+                  </p>
+                  <div className="space-y-1.5 text-left">
+                    <div className="flex justify-between text-[11px] text-stone-400">
+                      <span>Encuadre vertical:</span>
+                      <span className="text-gold font-mono">{posY}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={posY}
+                      onChange={(e) => setPosY(parseInt(e.target.value, 10))}
+                      className="w-full accent-gold cursor-pointer"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (rawOriginalFile) {
+                      setCropModalSrc(URL.createObjectURL(rawOriginalFile));
+                    } else {
+                      setCropModalSrc(fotoPrev);
+                    }
+                    setShowCropModal(true);
+                  }}
+                  className="w-full mt-2 py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500/25 via-gold/30 to-amber-500/25 hover:from-amber-500/35 hover:to-gold/45 border border-gold/70 text-gold-soft text-xs font-semibold flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(201,168,106,0.25)] active:scale-95 transition-all cursor-pointer"
+                >
+                  <span>✂️</span>
+                  <span>Ajustar Foto de Perfil (Estilo TikTok)</span>
+                </button>
+              )
             ) : (
               <p className="text-[11px] text-stone-400 text-center italic mt-1">
-                ✦ Sube una foto para encuadrar el rostro con zoom y arrastre táctil
+                ✦ Sube una foto o GIF animado para encuadrar en la lápida
               </p>
             )}
           </div>

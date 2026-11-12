@@ -14,6 +14,7 @@ export async function guardarArchivo(file: File | null): Promise<string | null> 
         .upload(`uploads/${fileName}`, file, {
           cacheControl: "3600",
           upsert: false,
+          contentType: file.type || (ext === "gif" ? "image/gif" : `image/${ext}`),
         });
 
       if (!error && data) {
