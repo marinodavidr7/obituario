@@ -117,7 +117,7 @@ export default function SubirFotoFamiliar({
             <input
               ref={fileRef}
               type="file"
-              accept="image/*"
+              accept="image/*,video/mp4,video/webm,.mp4,.webm"
               multiple
               required
               onChange={(e) => setArchivos(Array.from(e.target.files || []))}

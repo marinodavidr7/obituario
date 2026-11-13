@@ -4,6 +4,10 @@ import { triggerHaptic } from "@/lib/haptics";
 
 export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: string }) {
   const [open, setOpen] = useState<number | null>(null);
+  const [loadedMap, setLoadedMap] = useState<Record<string, boolean>>({});
+  const markLoaded = useCallback((src: string) => {
+    setLoadedMap((prev) => (prev[src] ? prev : { ...prev, [src]: true }));
+  }, []);
 
   const close = useCallback(() => {
     triggerHaptic("light");
@@ -33,7 +37,9 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
     <>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
         {fotos.map((src, i) => {
-          const isGif = src.toLowerCase().includes(".gif");
+          const isGif = /\.gif(\?|$)/i.test(src) || src.toLowerCase().includes(".gif");
+          const isVideoClip = /\.(mp4|webm|mov)(\?|$)/i.test(src);
+          const isLoaded = Boolean(loadedMap[src]);
           return (
             <button
               key={`${src}-${i}`}
@@ -42,20 +48,53 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
                 triggerHaptic("light");
                 setOpen(i);
               }}
-              aria-label={`Ampliar fotografía o GIF ${i + 1}`}
-              className="relative aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-gold/60 active:scale-95 group bg-black transition-transform cursor-pointer"
+              aria-label={`Ampliar fotografía o animación ${i + 1}`}
+              className="relative aspect-square rounded-xl overflow-hidden border border-white/10 hover:border-gold/60 active:scale-95 group bg-stone-950 transition-transform cursor-pointer"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={src}
-                alt={`Recuerdo de ${nombre} ${i + 1}`}
-                loading="lazy"
-                decoding="async"
-                className={`w-full h-full object-cover ${isGif ? "" : "grayscale-[30%]"} group-hover:grayscale-0 group-hover:scale-105 transition duration-300`}
-              />
+              {!isLoaded && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-stone-900/90 animate-pulse pointer-events-none z-10">
+                  <span className="w-4 h-4 rounded-full border-2 border-gold/30 border-t-gold animate-spin mb-1" />
+                  {(isGif || isVideoClip) && (
+                    <span className="text-[9px] text-gold-soft/80 tracking-wider uppercase">
+                      Cargando
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {isVideoClip ? (
+                <video
+                  src={src}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  preload="auto"
+                  onLoadedData={() => markLoaded(src)}
+                  onError={() => markLoaded(src)}
+                  className={`w-full h-full object-cover group-hover:scale-105 transition duration-300 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={src}
+                  alt={`Recuerdo de ${nombre} ${i + 1}`}
+                  loading={isGif ? "eager" : "lazy"}
+                  decoding={isGif ? "sync" : "async"}
+                  fetchPriority={isGif ? "high" : "auto"}
+                  onLoad={() => markLoaded(src)}
+                  onError={() => markLoaded(src)}
+                  className={`w-full h-full object-cover ${isGif ? "" : "grayscale-[30%]"} group-hover:grayscale-0 group-hover:scale-105 transition duration-300 ${isLoaded ? "opacity-100" : "opacity-0"}`}
+                />
+              )}
               {isGif && (
-                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-sans font-bold bg-gold/90 text-stone-950 uppercase tracking-wider shadow pointer-events-none">
+                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-sans font-bold bg-gold/90 text-stone-950 uppercase tracking-wider shadow pointer-events-none z-20">
                   GIF
+                </span>
+              )}
+              {isVideoClip && (
+                <span className="absolute bottom-1.5 left-1.5 px-1.5 py-0.5 rounded text-[8px] font-sans font-bold bg-emerald-400/90 text-stone-950 uppercase tracking-wider shadow pointer-events-none z-20">
+                  CLIP
                 </span>
               )}
             </button>
@@ -93,13 +132,34 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
             ‹
           </button>
 
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={fotos[open]}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-            className="max-w-[94vw] max-h-[78vh] sm:max-h-[82vh] rounded-xl shadow-2xl object-contain border border-white/15"
-          />
+          {/\.(mp4|webm|mov)(\?|$)/i.test(fotos[open]) ? (
+            <video
+              src={fotos[open]}
+              autoPlay
+              loop
+              muted
+              playsInline
+              controls
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-[94vw] max-h-[78vh] sm:max-h-[82vh] rounded-xl shadow-2xl object-contain border border-white/15 bg-black"
+            />
+          ) : (
+            <div className="relative flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+              {!loadedMap[fotos[open]] && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="w-7 h-7 rounded-full border-2 border-gold/30 border-t-gold animate-spin mb-2" />
+                  <span className="text-xs text-gold-soft tracking-wider">Cargando...</span>
+                </div>
+              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={fotos[open]}
+                alt=""
+                onLoad={() => markLoaded(fotos[open])}
+                className="max-w-[94vw] max-h-[78vh] sm:max-h-[82vh] rounded-xl shadow-2xl object-contain border border-white/15"
+              />
+            </div>
+          )}
 
           <button
             type="button"

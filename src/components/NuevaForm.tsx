@@ -346,12 +346,12 @@ export default function NuevaForm({
         <Card n="IV" titulo="Álbum de recuerdos" nota="Sube archivos o pega enlaces">
           <div className="grid md:grid-cols-2 gap-5">
             <div>
-              <label className={lab}>Subir fotos o GIFs desde tu equipo</label>
-              <input ref={galInput} type="file" name="galeria_archivos" accept="image/*,.gif" multiple hidden onChange={() => pick(galInput.current, galFiles, setGalFiles, true)} />
+              <label className={lab}>Subir fotos, GIFs o clips MP4 desde tu equipo</label>
+              <input ref={galInput} type="file" name="galeria_archivos" accept="image/*,.gif,video/mp4,video/webm,.mp4,.webm" multiple hidden onChange={() => pick(galInput.current, galFiles, setGalFiles, true)} />
               <button type="button" onClick={() => galInput.current?.click()} className="w-full rounded-xl border border-dashed border-gold/40 hover:border-gold hover:bg-gold/5 py-7 text-center transition-colors cursor-pointer">
                 <span className="block text-2xl text-gold">⬆</span>
-                <span className="block text-sm text-stone-200 mt-1">Elegir fotos o GIFs animados</span>
-                <span className="block text-[11px] text-stone-500">JPG, PNG, WebP, GIF animado · se reproducen solos</span>
+                <span className="block text-sm text-stone-200 mt-1">Elegir fotos, GIFs o clips MP4/WebM</span>
+                <span className="block text-[11px] text-stone-500">JPG, PNG, WebP, GIF, MP4/WebM · los clips MP4 cargan 10x más rápido</span>
               </button>
             </div>
             <div>
