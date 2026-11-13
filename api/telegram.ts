@@ -162,6 +162,47 @@ export default async function handler(req: any, res: any) {
 
   const update = req.body || {};
 
+  // 0. Endpoint de Corrección Ortográfica con IA para Dedicatorias
+  if (update.action === "corregir_ortografia") {
+    const textoOriginal = String(update.texto || "").trim();
+    if (!textoOriginal) {
+      return res.status(400).json({ ok: false, error: "Texto vacío" });
+    }
+    if (!openrouterKey) {
+      return res.status(200).json({ ok: false, textoCorregido: textoOriginal, error: "IA no configurada" });
+    }
+    try {
+      const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${openrouterKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          max_tokens: 400,
+          temperature: 0.1,
+          messages: [
+            {
+              role: "system",
+              content:
+                "Eres un corrector ortográfico y gramatical en español para dedicatorias de un obituario familiar. Corrige únicamente faltas de ortografía, tildes, signos de puntuación y errores tipográficos evidentes, manteniendo intactos el tono, los nombres propios, los sentimientos y las palabras del autor. Devuelve SOLO el texto corregido, sin comillas ni explicaciones.",
+            },
+            { role: "user", content: textoOriginal },
+          ],
+        }),
+      });
+      if (!aiRes.ok) {
+        return res.status(200).json({ ok: false, textoCorregido: textoOriginal });
+      }
+      const aiData = await aiRes.json().catch(() => ({}));
+      const textoCorregido = aiData.choices?.[0]?.message?.content?.trim() || textoOriginal;
+      return res.status(200).json({ ok: true, textoCorregido });
+    } catch {
+      return res.status(200).json({ ok: false, textoCorregido: textoOriginal });
+    }
+  }
+
   // 1. Manejo Ultrarrápido de Botones Interactivos (Callback Queries)
   if (update.callback_query) {
     const cq = update.callback_query;
@@ -228,6 +269,121 @@ export default async function handler(req: any, res: any) {
         : Promise.resolve();
 
       await Promise.all([ackPromise, deletePromise, editPromise]);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (data.startsWith("aprobar_foto:")) {
+      const fotoId = data.replace("aprobar_foto:", "");
+      let personaId = "";
+      let yaProcesada = false;
+
+      if (supabase) {
+        const { data: cfgRow } = await supabase
+          .from("config")
+          .select("valor")
+          .eq("clave", "fotos_pendientes")
+          .maybeSingle();
+
+        let pendientes: any[] = [];
+        try {
+          pendientes = cfgRow?.valor ? JSON.parse(cfgRow.valor) : [];
+        } catch {
+          pendientes = [];
+        }
+
+        const foto = pendientes.find((f) => f.id === fotoId);
+        if (!foto) {
+          yaProcesada = true;
+        } else {
+          personaId = foto.persona_id;
+          const { data: pRow } = await supabase
+            .from("personas")
+            .select("galeria")
+            .eq("id", personaId)
+            .maybeSingle();
+
+          const galeriaActual: string[] = Array.isArray(pRow?.galeria) ? pRow.galeria : [];
+          if (!galeriaActual.includes(foto.url)) {
+            await supabase
+              .from("personas")
+              .update({ galeria: [...galeriaActual, foto.url] })
+              .eq("id", personaId);
+          }
+
+          const restantes = pendientes.filter((f) => f.id !== fotoId);
+          await supabase
+            .from("config")
+            .upsert({ clave: "fotos_pendientes", valor: JSON.stringify(restantes) });
+        }
+      }
+
+      const ackPromise = sendTelegram(token, "answerCallbackQuery", {
+        callback_query_id: cq.id,
+        text: yaProcesada ? "ℹ️ Esta foto ya fue procesada anteriormente." : "✅ Foto aprobada y agregada a la galería.",
+        show_alert: true,
+      });
+
+      const editPromise =
+        chatId && messageId
+          ? sendTelegram(token, "editMessageReplyMarkup", {
+              chat_id: chatId,
+              message_id: messageId,
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: "✅ FOTO APROBADA Y PUBLICADA", callback_data: "noop" }],
+                  ...(personaId
+                    ? [[{ text: "🌐 Ver en el Santuario", url: `${siteUrl}/#/persona/${personaId}` }]]
+                    : []),
+                ],
+              },
+            })
+          : Promise.resolve();
+
+      await Promise.all([ackPromise, editPromise]);
+      return res.status(200).json({ ok: true });
+    }
+
+    if (data.startsWith("rechazar_foto:")) {
+      const fotoId = data.replace("rechazar_foto:", "");
+
+      if (supabase) {
+        const { data: cfgRow } = await supabase
+          .from("config")
+          .select("valor")
+          .eq("clave", "fotos_pendientes")
+          .maybeSingle();
+
+        let pendientes: any[] = [];
+        try {
+          pendientes = cfgRow?.valor ? JSON.parse(cfgRow.valor) : [];
+        } catch {
+          pendientes = [];
+        }
+
+        const restantes = pendientes.filter((f) => f.id !== fotoId);
+        await supabase
+          .from("config")
+          .upsert({ clave: "fotos_pendientes", valor: JSON.stringify(restantes) });
+      }
+
+      const ackPromise = sendTelegram(token, "answerCallbackQuery", {
+        callback_query_id: cq.id,
+        text: "❌ Foto rechazada y descartada.",
+        show_alert: true,
+      });
+
+      const editPromise =
+        chatId && messageId
+          ? sendTelegram(token, "editMessageReplyMarkup", {
+              chat_id: chatId,
+              message_id: messageId,
+              reply_markup: {
+                inline_keyboard: [[{ text: "❌ FOTO RECHAZADA", callback_data: "noop" }]],
+              },
+            })
+          : Promise.resolve();
+
+      await Promise.all([ackPromise, editPromise]);
       return res.status(200).json({ ok: true });
     }
 

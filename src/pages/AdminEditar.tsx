@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import Link from "@/components/Link";
+import Dedicatorias from "@/components/Dedicatorias";
 import NuevaForm from "@/components/NuevaForm";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import { useAdmin } from "@/lib/auth";
-import { deletePersona, getPersona, listFamilias } from "@/lib/db";
+import {
+  aprobarFotoPendiente,
+  deletePersona,
+  getPersona,
+  listDedicatorias,
+  listFamilias,
+  listFotosPendientes,
+  rechazarFotoPendiente,
+} from "@/lib/db";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { editarPersona } from "@/lib/actions";
 import { navigate } from "@/lib/router";
@@ -16,7 +25,14 @@ export default function AdminEditar({ id }: { id: string }) {
   const [persona, setPersona] = useState<Persona | null>(null);
   const [error, setError] = useState<string | undefined>();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [, setTick] = useState(0);
   const familias = listFamilias().map((f) => ({ id: f.id, apellido: f.apellido }));
+
+  useEffect(() => {
+    const onUpdate = () => setTick((t) => t + 1);
+    window.addEventListener("panteon:db-updated", onUpdate);
+    return () => window.removeEventListener("panteon:db-updated", onUpdate);
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -132,6 +148,91 @@ export default function AdminEditar({ id }: { id: string }) {
         error={error}
         personaInicial={persona}
       />
+
+      {/* Fotos Pendientes de Aprobación de este perfil */}
+      {(() => {
+        const pendientes = listFotosPendientes(persona.id);
+        if (pendientes.length === 0) return null;
+        return (
+          <section className="mt-10 p-5 sm:p-6 rounded-2xl border border-amber-500/30 bg-amber-950/15 space-y-4">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-serif text-xl text-amber-200">
+                📸 Fotos enviadas por familiares ({pendientes.length})
+              </h2>
+              <span className="text-[11px] uppercase tracking-wider text-amber-300/80">
+                En espera de aprobación
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {pendientes.map((f) => (
+                <div
+                  key={f.id}
+                  className="rounded-xl overflow-hidden border border-white/10 bg-stone-950/70 flex flex-col"
+                >
+                  <img
+                    src={f.url}
+                    alt={`Foto enviada por ${f.remitente}`}
+                    className="w-full h-44 object-cover"
+                  />
+                  <div className="p-3 space-y-2.5 flex-1 flex flex-col justify-between">
+                    <div className="text-xs text-stone-300">
+                      Enviada por <span className="text-gold-soft font-medium">{f.remitente}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await aprobarFotoPendiente(f.id);
+                          if (res.success) {
+                            const updated = getPersona(persona.id);
+                            if (updated) setPersona({ ...updated });
+                            toast("Foto aprobada y agregada a la galería", "success");
+                          } else {
+                            toast(res.error || "No se pudo aprobar", "warning");
+                          }
+                        }}
+                        className="flex-1 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-xs uppercase tracking-wider cursor-pointer"
+                      >
+                        ✅ Aprobar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await rechazarFotoPendiente(f.id);
+                          toast("Foto rechazada", "delete");
+                        }}
+                        className="flex-1 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 text-xs uppercase tracking-wider cursor-pointer"
+                      >
+                        ❌ Rechazar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* Dedicatorias del perfil (edición y moderación directa) */}
+      <section className="mt-10 p-5 sm:p-6 rounded-2xl border border-white/10 bg-stone-900/50 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-serif text-xl text-stone-100">
+              💌 Dedicatorias de {persona.nombre}
+            </h2>
+            <p className="text-xs text-stone-400">
+              Aquí puedes leer, editar, corregir ortografía o eliminar las dedicatorias de este perfil.
+            </p>
+          </div>
+        </div>
+        <Dedicatorias
+          personaId={persona.id}
+          nombre={persona.nombre}
+          inicial={listDedicatorias(persona.id)}
+          esAdmin={true}
+        />
+      </section>
 
       {/* Zona de Peligro / Borrado directo */}
       <div className="mt-12 p-6 rounded-2xl border border-rose-500/30 bg-rose-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

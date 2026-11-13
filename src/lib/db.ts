@@ -2,6 +2,7 @@ import type {
   Dato,
   Dedicatoria,
   Familia,
+  FotoPendiente,
   Persona,
   SanctuaryStats,
   TrackActivoInfo,
@@ -21,7 +22,7 @@ import {
   broadcastFamiliaActualizada,
 } from "./realtime";
 
-export type { Dato, Dedicatoria, Familia, Persona, TrackActivoInfo, TrackRotacion, Video };
+export type { Dato, Dedicatoria, Familia, FotoPendiente, Persona, TrackActivoInfo, TrackRotacion, Video };
 
 const STORAGE_KEY_FAMILIAS = "panteon_familias_v1";
 const STORAGE_KEY_PERSONAS = "panteon_personas_v1";
@@ -847,6 +848,189 @@ export async function deleteDedicatoria(id: string | number): Promise<{ success:
     } catch (err: any) {
       console.error("[Supabase] Fallo al eliminar dedicatoria:", err);
       return { success: false, error: err?.message || "Error al eliminar" };
+    }
+  }
+  return { success: true };
+}
+
+export async function updateDedicatoria(
+  id: string | number,
+  autor: string,
+  texto: string
+): Promise<{ success: boolean; error?: string }> {
+  const autorLimpio = autor.trim();
+  const textoLimpio = texto.trim();
+  if (!autorLimpio || !textoLimpio) {
+    return { success: false, error: "El autor y el mensaje son obligatorios." };
+  }
+
+  const idx = cachedDedicatorias.findIndex((x) => String(x.id) === String(id));
+  if (idx >= 0) {
+    cachedDedicatorias[idx] = {
+      ...cachedDedicatorias[idx],
+      autor: autorLimpio,
+      texto: textoLimpio,
+    };
+    saveState();
+    window.dispatchEvent(new Event("panteon:db-updated"));
+  }
+
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from("dedicatorias")
+        .update({ autor: autorLimpio, texto: textoLimpio })
+        .eq("id", id);
+      if (error) {
+        console.error("[Supabase] Error al editar dedicatoria:", error);
+        return { success: false, error: error.message };
+      }
+      return { success: true };
+    } catch (err: any) {
+      console.error("[Supabase] Fallo al editar dedicatoria:", err);
+      return { success: false, error: err?.message || "Error al actualizar" };
+    }
+  }
+  return { success: true };
+}
+
+function parseFotosPendientes(raw: string | null | undefined): FotoPendiente[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function listFotosPendientes(personaId?: string): FotoPendiente[] {
+  const todas = parseFotosPendientes(cachedConfig["fotos_pendientes"]);
+  if (personaId) return todas.filter((f) => f.persona_id === personaId);
+  return todas;
+}
+
+async function fetchLatestFotosPendientes(): Promise<FotoPendiente[]> {
+  if (isSupabaseConfigured) {
+    try {
+      const { data } = await supabase
+        .from("config")
+        .select("valor")
+        .eq("clave", "fotos_pendientes")
+        .maybeSingle();
+      if (data && typeof data.valor === "string") {
+        cachedConfig["fotos_pendientes"] = data.valor;
+        saveState();
+        return parseFotosPendientes(data.valor);
+      }
+    } catch {
+      // Fallback to local cache
+    }
+  }
+  return listFotosPendientes();
+}
+
+export async function addFotoPendiente(
+  personaId: string,
+  personaNombre: string,
+  url: string,
+  remitente = "Familiar"
+): Promise<FotoPendiente> {
+  const actuales = await fetchLatestFotosPendientes();
+  const nueva: FotoPendiente = {
+    id: `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+    persona_id: personaId,
+    persona_nombre: personaNombre,
+    url,
+    remitente: remitente.trim() || "Familiar",
+    fecha: new Date().toISOString(),
+  };
+  const actualizadas = [nueva, ...actuales];
+  const serialized = JSON.stringify(actualizadas);
+  cachedConfig["fotos_pendientes"] = serialized;
+  saveState();
+
+  if (isSupabaseConfigured) {
+    await supabase.from("config").upsert({ clave: "fotos_pendientes", valor: serialized });
+  }
+  window.dispatchEvent(new Event("panteon:db-updated"));
+  return nueva;
+}
+
+export async function aprobarFotoPendiente(
+  fotoId: string
+): Promise<{ success: boolean; error?: string }> {
+  const actuales = await fetchLatestFotosPendientes();
+  const foto = actuales.find((f) => f.id === fotoId);
+  if (!foto) {
+    return { success: false, error: "La foto ya fue procesada o no existe." };
+  }
+
+  const restantes = actuales.filter((f) => f.id !== fotoId);
+  const serialized = JSON.stringify(restantes);
+  cachedConfig["fotos_pendientes"] = serialized;
+
+  const pIdx = cachedPersonas.findIndex((p) => p.id === foto.persona_id);
+  if (pIdx >= 0) {
+    const galeriaActual = Array.isArray(cachedPersonas[pIdx].galeria)
+      ? cachedPersonas[pIdx].galeria
+      : [];
+    if (!galeriaActual.includes(foto.url)) {
+      cachedPersonas[pIdx] = {
+        ...cachedPersonas[pIdx],
+        galeria: [...galeriaActual, foto.url],
+      };
+    }
+    broadcastPersonaActualizada(cachedPersonas[pIdx]);
+  }
+  saveState();
+  window.dispatchEvent(new Event("panteon:db-updated"));
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data: pRow } = await supabase
+        .from("personas")
+        .select("galeria")
+        .eq("id", foto.persona_id)
+        .maybeSingle();
+
+      const galeriaDb: string[] = Array.isArray(pRow?.galeria) ? pRow.galeria : [];
+      if (!galeriaDb.includes(foto.url)) {
+        const nuevaGaleria = [...galeriaDb, foto.url];
+        const { error: errPersona } = await supabase
+          .from("personas")
+          .update({ galeria: nuevaGaleria })
+          .eq("id", foto.persona_id);
+        if (errPersona) {
+          return { success: false, error: errPersona.message };
+        }
+      }
+
+      await supabase.from("config").upsert({ clave: "fotos_pendientes", valor: serialized });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Error al aprobar foto" };
+    }
+  }
+  return { success: true };
+}
+
+export async function rechazarFotoPendiente(
+  fotoId: string
+): Promise<{ success: boolean; error?: string }> {
+  const actuales = await fetchLatestFotosPendientes();
+  const restantes = actuales.filter((f) => f.id !== fotoId);
+  const serialized = JSON.stringify(restantes);
+  cachedConfig["fotos_pendientes"] = serialized;
+  saveState();
+  window.dispatchEvent(new Event("panteon:db-updated"));
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from("config").upsert({ clave: "fotos_pendientes", valor: serialized });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Error al rechazar foto" };
     }
   }
   return { success: true };

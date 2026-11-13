@@ -7,18 +7,22 @@ import { useToast } from "@/components/toast";
 import { loginAdmin, logoutAdmin, useAdmin } from "@/lib/auth";
 import { getGeneralSanctuaryTheme, setGeneralSanctuaryTheme, THEMES, type ThemeId } from "@/lib/theme";
 import {
+  aprobarFotoPendiente,
   aprobarPersona,
   deleteDedicatoria,
   deleteFamilia,
   deletePersona,
   getConfig,
   listFamilias,
+  listFotosPendientes,
   listPersonas,
   listSolicitudesPendientes,
   listTodasDedicatorias,
+  rechazarFotoPendiente,
   rechazarPersona,
   setConfig,
   stats,
+  updateDedicatoria,
 } from "@/lib/db";
 import {
   getTelegramConfig,
@@ -29,7 +33,7 @@ import {
 } from "@/lib/telegram";
 import { guardarArchivo } from "@/lib/uploads";
 import { iniciales, formatearFecha } from "@/lib/utils";
-import type { Dedicatoria, Familia, Persona, SanctuaryStats } from "@/types";
+import type { Dedicatoria, Familia, FotoPendiente, Persona, SanctuaryStats } from "@/types";
 
 const pill =
   "px-4 sm:px-5 py-2.5 sm:py-2 rounded-full text-[11px] uppercase tracking-[0.18em] active:scale-95 transition-all text-center";
@@ -54,7 +58,11 @@ export default function Admin() {
   const [familias, setFamilias] = useState<(Familia & { total: number; velas: number; flores: number; fotos: string[] })[]>([]);
   const [familiaAEditar, setFamiliaAEditar] = useState<Familia | null>(null);
   const [dedicatorias, setDedicatorias] = useState<(Dedicatoria & { persona_nombre: string })[]>([]);
+  const [editingDedId, setEditingDedId] = useState<string | number | null>(null);
+  const [editDedAutor, setEditDedAutor] = useState("");
+  const [editDedTexto, setEditDedTexto] = useState("");
   const [solicitudes, setSolicitudes] = useState<(Persona & { familia_apellido: string })[]>([]);
+  const [fotosPendientes, setFotosPendientes] = useState<FotoPendiente[]>([]);
   const [s, setStats] = useState<SanctuaryStats>({ almas: 0, familias: 0, velas: 0, flores: 0, visitas: 0 });
 
   const [musicaGeneralUrl, setMusicaGeneralUrl] = useState<string>("");
@@ -78,6 +86,7 @@ export default function Admin() {
     setFamilias(listFamilias());
     setDedicatorias(listTodasDedicatorias(30));
     setSolicitudes(listSolicitudesPendientes());
+    setFotosPendientes(listFotosPendientes());
     setStats(stats());
     setMusicaGeneralUrl(getConfig("musica_general_url") || "");
     setMusicaGeneralTitulo(getConfig("musica_general_titulo") || "");
@@ -408,6 +417,86 @@ export default function Admin() {
                     <span>🗑️</span>
                     <span>Rechazar y Eliminar</span>
                   </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SECCIÓN: FOTOS PENDIENTES DE APROBACIÓN */}
+      {fotosPendientes.length > 0 && (
+        <div className="mt-8 rounded-2xl border border-amber-500/40 bg-gradient-to-b from-amber-950/25 via-stone-900/90 to-stone-950 p-5 sm:p-6 shadow-[0_4px_30px_rgba(245,158,11,0.12)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-amber-500/20">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-300 grid place-items-center text-base">
+                📸
+              </span>
+              <div>
+                <h2 className="font-serif text-2xl text-[#fbf8f0]">
+                  Fotos Enviadas por Familiares ({fotosPendientes.length})
+                </h2>
+                <p className="text-xs text-amber-200/80">
+                  Fotografías en espera de aprobación para aparecer en la galería de su ser querido.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+            {fotosPendientes.map((f) => (
+              <div
+                key={f.id}
+                className="rounded-xl overflow-hidden border border-white/10 bg-stone-950/80 flex flex-col"
+              >
+                <img
+                  src={f.url}
+                  alt={`Foto para ${f.persona_nombre}`}
+                  className="w-full h-48 object-cover"
+                />
+                <div className="p-3.5 space-y-3 flex-1 flex flex-col justify-between">
+                  <div className="space-y-1 text-xs">
+                    <div className="text-stone-100 font-medium">
+                      Para:{" "}
+                      <Link
+                        href={`/admin/editar/${f.persona_id}`}
+                        className="text-gold-soft hover:underline"
+                      >
+                        {f.persona_nombre}
+                      </Link>
+                    </div>
+                    <div className="text-stone-400">
+                      Enviada por: <span className="text-amber-200">{f.remitente}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const res = await aprobarFotoPendiente(f.id);
+                        refreshData();
+                        if (res.success) {
+                          toast("Foto aprobada y publicada en la galería", "success");
+                        } else {
+                          toast(res.error || "Error al aprobar foto", "warning");
+                        }
+                      }}
+                      className="flex-1 py-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/45 border border-emerald-500/50 text-emerald-200 text-xs uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      ✅ Aprobar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await rechazarFotoPendiente(f.id);
+                        refreshData();
+                        toast("Foto rechazada", "delete");
+                      }}
+                      className="flex-1 py-2 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 text-xs uppercase tracking-wider transition-all cursor-pointer"
+                    >
+                      ❌ Rechazar
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -899,42 +988,101 @@ export default function Admin() {
                 key={d.id}
                 className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-3.5 hover:bg-white/[0.02] transition-colors"
               >
-                <div className="min-w-0 flex-1">
-                  <p className="font-sans text-sm text-stone-100 font-normal leading-relaxed">“{d.texto}”</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-stone-400">
-                    <span className="text-pink-300 font-medium">— {d.autor}</span>
-                    <span>·</span>
-                    <span>
-                      Para:{" "}
-                      <Link
-                        href={`/persona/${d.persona_id}`}
-                        className="text-stone-300 hover:text-gold-soft underline"
+                {editingDedId !== null && String(editingDedId) === String(d.id) ? (
+                  <div className="w-full space-y-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <input
+                        value={editDedAutor}
+                        onChange={(e) => setEditDedAutor(e.target.value)}
+                        placeholder="Autor"
+                        className="bg-stone-950 border border-white/15 focus:border-gold rounded-lg px-3 py-1.5 text-xs text-stone-100 focus:outline-none"
+                      />
+                      <input
+                        value={editDedTexto}
+                        onChange={(e) => setEditDedTexto(e.target.value)}
+                        placeholder="Mensaje"
+                        className="sm:col-span-2 bg-stone-950 border border-white/15 focus:border-gold rounded-lg px-3 py-1.5 text-xs text-stone-100 focus:outline-none"
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingDedId(null)}
+                        className="px-3 py-1 rounded-full border border-white/15 text-[10px] uppercase tracking-wider text-stone-400 hover:text-stone-200 cursor-pointer"
                       >
-                        {d.persona_nombre}
-                      </Link>
-                    </span>
-                    <span>·</span>
-                    <span className="text-stone-400 font-sans">{formatearFecha(d.fecha)}</span>
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await updateDedicatoria(d.id, editDedAutor, editDedTexto);
+                          if (res.success) {
+                            setEditingDedId(null);
+                            refreshData();
+                            toast("Dedicatoria actualizada", "success");
+                          } else {
+                            toast(res.error || "No se pudo actualizar", "warning");
+                          }
+                        }}
+                        className="px-3.5 py-1 rounded-full bg-gold/20 hover:bg-gold/30 border border-gold/50 text-[10px] uppercase tracking-wider text-gold-soft cursor-pointer"
+                      >
+                        Guardar
+                      </button>
+                    </div>
                   </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setConfirmState({
-                      open: true,
-                      title: "Eliminar dedicatoria",
-                      message: `¿Deseas eliminar permanentemente la dedicatoria firmada por "${d.autor}"?`,
-                      onConfirm: async () => {
-                        await deleteDedicatoria(d.id);
-                        refreshData();
-                        closeConfirm();
-                        toast("Dedicatoria eliminada", "delete");
-                      },
-                    });
-                  }}
-                  className="px-3 py-1.5 rounded-full border border-rose-400/25 text-[10px] uppercase tracking-[0.18em] text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15 hover:border-rose-400/50 transition-colors shrink-0"
-                >
-                  Eliminar
-                </button>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-sans text-sm text-stone-100 font-normal leading-relaxed">“{d.texto}”</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-stone-400">
+                        <span className="text-pink-300 font-medium">— {d.autor}</span>
+                        <span>·</span>
+                        <span>
+                          Para:{" "}
+                          <Link
+                            href={`/persona/${d.persona_id}`}
+                            className="text-stone-300 hover:text-gold-soft underline"
+                          >
+                            {d.persona_nombre}
+                          </Link>
+                        </span>
+                        <span>·</span>
+                        <span className="text-stone-400 font-sans">{formatearFecha(d.fecha)}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingDedId(d.id);
+                          setEditDedAutor(d.autor);
+                          setEditDedTexto(d.texto);
+                        }}
+                        className="px-3 py-1.5 rounded-full border border-gold/30 text-[10px] uppercase tracking-[0.18em] text-gold-soft hover:text-gold hover:bg-gold/15 transition-colors cursor-pointer"
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        onClick={() => {
+                          setConfirmState({
+                            open: true,
+                            title: "Eliminar dedicatoria",
+                            message: `¿Deseas eliminar permanentemente la dedicatoria firmada por "${d.autor}"?`,
+                            onConfirm: async () => {
+                              await deleteDedicatoria(d.id);
+                              refreshData();
+                              closeConfirm();
+                              toast("Dedicatoria eliminada", "delete");
+                            },
+                          });
+                        }}
+                        className="px-3 py-1.5 rounded-full border border-rose-400/25 text-[10px] uppercase tracking-[0.18em] text-rose-300/80 hover:text-rose-200 hover:bg-rose-500/15 hover:border-rose-400/50 transition-colors cursor-pointer"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

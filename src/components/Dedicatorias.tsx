@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import type { Dedicatoria } from "@/types";
-import { addDedicatoria, deleteDedicatoria } from "@/lib/db";
+import { addDedicatoria, deleteDedicatoria, updateDedicatoria } from "@/lib/db";
 import { validarDedicatoria } from "@/lib/moderacion";
+import { corregirOrtografiaIA } from "@/lib/telegram";
 import { triggerHaptic } from "@/lib/haptics";
 import { formatearFecha } from "@/lib/utils";
 
@@ -26,7 +27,12 @@ export default function Dedicatorias({
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [corrigiendo, setCorrigiendo] = useState(false);
   const [deletingId, setDeletingId] = useState<number | string | null>(null);
+  const [editingId, setEditingId] = useState<number | string | null>(null);
+  const [editAutor, setEditAutor] = useState("");
+  const [editTexto, setEditTexto] = useState("");
+  const [guardandoEdit, setGuardandoEdit] = useState(false);
 
   useEffect(() => {
     setLista(inicial || []);
@@ -79,7 +85,9 @@ export default function Dedicatorias({
 
     setEnviando(true);
     try {
-      const nueva = addDedicatoria(personaId, check.autorLimpio, check.textoLimpio);
+      const iaRes = await corregirOrtografiaIA(check.textoLimpio);
+      const textoFinal = iaRes.ok && iaRes.textoCorregido ? iaRes.textoCorregido : check.textoLimpio;
+      const nueva = addDedicatoria(personaId, check.autorLimpio, textoFinal);
       triggerHaptic("success");
       setLista((l) => [nueva, ...l]);
       setAutor("");
@@ -90,6 +98,51 @@ export default function Dedicatorias({
       setError("No se pudo publicar. Inténtalo de nuevo.");
     } finally {
       setEnviando(false);
+    }
+  }
+
+  async function handleCorregirOrtografia() {
+    if (texto.trim().length < 4 || corrigiendo) return;
+    setCorrigiendo(true);
+    try {
+      const res = await corregirOrtografiaIA(texto);
+      if (res.ok && res.textoCorregido) {
+        setTexto(res.textoCorregido);
+        toast("Ortografía revisada y corregida con IA", "success");
+      } else {
+        toast("No se pudo conectar con la IA en este momento", "warning");
+      }
+    } finally {
+      setCorrigiendo(false);
+    }
+  }
+
+  function iniciarEdicion(d: Dedicatoria) {
+    setEditingId(d.id);
+    setEditAutor(d.autor);
+    setEditTexto(d.texto);
+  }
+
+  async function guardarEdicion(id: number | string) {
+    if (!editAutor.trim() || !editTexto.trim() || guardandoEdit) return;
+    setGuardandoEdit(true);
+    try {
+      const res = await updateDedicatoria(id, editAutor, editTexto);
+      if (res.success) {
+        setLista((prev) =>
+          prev.map((item) =>
+            String(item.id) === String(id)
+              ? { ...item, autor: editAutor.trim(), texto: editTexto.trim() }
+              : item
+          )
+        );
+        setEditingId(null);
+        toast("Dedicatoria actualizada correctamente", "success");
+      } else {
+        toast(res.error || "No se pudo actualizar la dedicatoria", "warning");
+      }
+    } finally {
+      setGuardandoEdit(false);
     }
   }
 
@@ -154,13 +207,24 @@ export default function Dedicatorias({
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
           <span className="text-[10px] sm:text-[11px] text-stone-500">
-            ✦ Espacio protegido: se filtran automáticamente palabras ofensivas y spam.
+            ✦ Espacio protegido: la IA corrige automáticamente la ortografía y filtra spam.
           </span>
-          <div className="flex items-center justify-end">
+          <div className="flex items-center justify-end gap-2">
+            {texto.trim().length >= 4 && (
+              <button
+                type="button"
+                onClick={handleCorregirOrtografia}
+                disabled={corrigiendo || enviando}
+                className="px-3.5 py-2 sm:py-1.5 rounded-full bg-indigo-500/15 hover:bg-indigo-500/25 active:scale-95 disabled:opacity-50 border border-indigo-400/35 text-indigo-200 text-xs sm:text-[11px] uppercase tracking-wider transition-all shrink-0 cursor-pointer"
+                title="Corregir faltas de ortografía y tildes con IA"
+              >
+                {corrigiendo ? "Corrigiendo..." : "✨ Corregir ortografía"}
+              </button>
+            )}
             <button
               type="submit"
-              disabled={enviando}
-              className="w-full sm:w-auto px-5 py-2.5 sm:py-1.5 rounded-full bg-gold/15 hover:bg-gold/25 active:scale-95 disabled:opacity-50 border border-gold/40 text-gold-soft text-xs sm:text-[11px] uppercase tracking-widest transition-all shrink-0"
+              disabled={enviando || corrigiendo}
+              className="w-full sm:w-auto px-5 py-2.5 sm:py-1.5 rounded-full bg-gold/15 hover:bg-gold/25 active:scale-95 disabled:opacity-50 border border-gold/40 text-gold-soft text-xs sm:text-[11px] uppercase tracking-widest transition-all shrink-0 cursor-pointer"
             >
               {enviando ? "Publicando..." : "Publicar dedicatoria"}
             </button>
@@ -190,29 +254,76 @@ export default function Dedicatorias({
             key={r.id}
             className="p-4 sm:p-5 rounded-2xl bg-stone-950/70 border border-white/10 hover:border-pink-500/25 shadow-lg backdrop-blur-sm transition-all group flex flex-col justify-between"
           >
-            <p className="font-sans text-[14.5px] sm:text-[15.5px] text-stone-100 font-normal leading-relaxed tracking-normal select-text break-words">
-              “{r.texto}”
-            </p>
-            <div className="mt-3.5 pt-2.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
-              <span className="text-pink-300 font-medium tracking-wide">
-                — {r.autor}
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-stone-400 text-[11px] sm:text-xs font-sans">
-                  {formatearFecha(r.fecha)}
-                </span>
-                {esAdmin && (
+            {editingId !== null && String(editingId) === String(r.id) ? (
+              <div className="space-y-3">
+                <input
+                  value={editAutor}
+                  onChange={(e) => setEditAutor(e.target.value)}
+                  placeholder="Autor"
+                  className="w-full bg-stone-900 border border-white/15 focus:border-gold rounded-lg px-3 py-1.5 text-xs text-stone-100 focus:outline-none"
+                />
+                <textarea
+                  rows={3}
+                  value={editTexto}
+                  onChange={(e) => setEditTexto(e.target.value)}
+                  placeholder="Texto de la dedicatoria"
+                  className="w-full bg-stone-900 border border-white/15 focus:border-gold rounded-lg px-3 py-2 text-sm text-stone-100 focus:outline-none"
+                />
+                <div className="flex flex-wrap items-center justify-end gap-2">
                   <button
                     type="button"
-                    onClick={() => borrar(r.id)}
-                    className="text-[10px] uppercase tracking-wider text-rose-400 hover:text-rose-200 border border-rose-500/30 hover:border-rose-400/60 rounded-full px-2.5 py-0.5 active:scale-95 transition-all cursor-pointer"
-                    title="Eliminar dedicatoria"
+                    onClick={() => setEditingId(null)}
+                    className="px-3 py-1 rounded-full border border-white/15 text-stone-400 hover:text-stone-200 text-[11px] uppercase tracking-wider cursor-pointer"
                   >
-                    Eliminar
+                    Cancelar
                   </button>
-                )}
+                  <button
+                    type="button"
+                    disabled={guardandoEdit}
+                    onClick={() => guardarEdicion(r.id)}
+                    className="px-4 py-1 rounded-full bg-gold/20 hover:bg-gold/30 border border-gold/50 text-gold-soft text-[11px] uppercase tracking-wider cursor-pointer disabled:opacity-50"
+                  >
+                    {guardandoEdit ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <>
+                <p className="font-sans text-[14.5px] sm:text-[15.5px] text-stone-100 font-normal leading-relaxed tracking-normal select-text break-words">
+                  “{r.texto}”
+                </p>
+                <div className="mt-3.5 pt-2.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <span className="text-pink-300 font-medium tracking-wide">
+                    — {r.autor}
+                  </span>
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    <span className="text-stone-400 text-[11px] sm:text-xs font-sans">
+                      {formatearFecha(r.fecha)}
+                    </span>
+                    {esAdmin && (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => iniciarEdicion(r)}
+                          className="text-[10px] uppercase tracking-wider text-gold-soft hover:text-gold border border-gold/30 hover:border-gold/60 rounded-full px-2.5 py-0.5 active:scale-95 transition-all cursor-pointer"
+                          title="Editar dedicatoria"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => borrar(r.id)}
+                          className="text-[10px] uppercase tracking-wider text-rose-400 hover:text-rose-200 border border-rose-500/30 hover:border-rose-400/60 rounded-full px-2.5 py-0.5 active:scale-95 transition-all cursor-pointer"
+                          title="Eliminar dedicatoria"
+                        >
+                          Eliminar
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
           </article>
         ))}
       </div>

@@ -1,4 +1,5 @@
 import { aprobarPersona, getFamilia, getPersona, rechazarPersona, getConfig, setConfig } from "@/lib/db";
+import type { FotoPendiente } from "@/types";
 
 export function getTelegramConfig() {
   const envToken = (import.meta.env.VITE_TELEGRAM_BOT_TOKEN as string) || "";
@@ -164,6 +165,87 @@ export async function notificarSolicitudTelegram(personaId: string): Promise<{ o
       return { ok: false, error: errData.description || "Error de API Telegram" };
     }
 
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Error al conectar con Telegram" };
+  }
+}
+
+export async function corregirOrtografiaIA(
+  texto: string
+): Promise<{ ok: boolean; textoCorregido: string }> {
+  const limpio = texto.trim();
+  if (!limpio) return { ok: false, textoCorregido: texto };
+  try {
+    const res = await fetch("/api/telegram", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "corregir_ortografia", texto: limpio }),
+    });
+    if (!res.ok) return { ok: false, textoCorregido: texto };
+    const data = await res.json().catch(() => ({}));
+    if (data.ok && typeof data.textoCorregido === "string" && data.textoCorregido.trim()) {
+      return { ok: true, textoCorregido: data.textoCorregido.trim() };
+    }
+    return { ok: false, textoCorregido: texto };
+  } catch {
+    return { ok: false, textoCorregido: texto };
+  }
+}
+
+export async function notificarFotoPendienteTelegram(
+  foto: FotoPendiente
+): Promise<{ ok: boolean; error?: string }> {
+  const { token, chatId, appUrl, configurado } = getTelegramConfig();
+  if (!configurado) return { ok: false, error: "Telegram no configurado" };
+
+  const caption = [
+    "📸 *NUEVA FOTO EN ESPERA DE APROBACIÓN*",
+    "──────────────────────────",
+    `👤 *Para:* ${foto.persona_nombre}`,
+    `✍️ *Enviada por:* ${foto.remitente}`,
+    "⏳ *Estado:* Pendiente de aprobación",
+    "──────────────────────────",
+    "¿Deseas agregar esta foto a su galería?",
+  ].join("\n");
+
+  const inline_keyboard = [
+    [
+      { text: "✅ Aprobar Foto", callback_data: `aprobar_foto:${foto.id}` },
+      { text: "❌ Rechazar", callback_data: `rechazar_foto:${foto.id}` },
+    ],
+    [{ text: "✏️ Ver en Panel", url: `${appUrl}/#/admin/editar/${foto.persona_id}` }],
+  ];
+
+  try {
+    const resPhoto = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        photo: foto.url,
+        caption,
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard },
+      }),
+    });
+    if (resPhoto.ok) return { ok: true };
+
+    // Fallback a sendMessage si Telegram no pudo descargar la URL directamente
+    const resMsg = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `${caption}\n\n🔗 [Ver imagen](${foto.url})`,
+        parse_mode: "Markdown",
+        reply_markup: { inline_keyboard },
+      }),
+    });
+    if (!resMsg.ok) {
+      const errData = await resMsg.json().catch(() => ({}));
+      return { ok: false, error: errData.description || "Error de API Telegram" };
+    }
     return { ok: true };
   } catch (err: any) {
     return { ok: false, error: err.message || "Error al conectar con Telegram" };

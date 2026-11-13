@@ -67,6 +67,15 @@ export type Dedicatoria = {
   persona_nombre?: string;
 };
 
+export type FotoPendiente = {
+  id: string;
+  persona_id: string;
+  persona_nombre: string;
+  url: string;
+  remitente: string;
+  fecha: string;
+};
+
 export type SanctuaryStats = {
   almas: number;
   familias: number;

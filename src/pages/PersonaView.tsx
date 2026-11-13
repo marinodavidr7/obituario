@@ -3,6 +3,7 @@ import Link from "@/components/Link";
 import Altar from "@/components/Altar";
 import Dedicatorias from "@/components/Dedicatorias";
 import Gallery from "@/components/Gallery";
+import SubirFotoFamiliar from "@/components/SubirFotoFamiliar";
 import Videos from "@/components/Videos";
 import PersonaAudioWatcher from "@/components/PersonaAudioWatcher";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -459,12 +460,17 @@ export default function PersonaView({ id }: { id: string }) {
         </aside>
 
         <div className="min-w-0 space-y-6 sm:space-y-9">
-          {p.galeria.length > 0 && (
-            <section>
-              <Titulo>Álbum de Recuerdos ({p.galeria.length})</Titulo>
+          <section>
+            <Titulo>Álbum de Recuerdos ({p.galeria.length})</Titulo>
+            {p.galeria.length > 0 ? (
               <Gallery fotos={p.galeria} nombre={p.nombre} />
-            </section>
-          )}
+            ) : (
+              <p className="text-xs text-stone-500 italic">
+                Aún no hay fotografías en el álbum. Los familiares pueden compartir recuerdos para aprobación.
+              </p>
+            )}
+            <SubirFotoFamiliar personaId={p.id} personaNombre={p.nombre} />
+          </section>
           {p.videos.length > 0 && (
             <section>
               <Videos videos={p.videos} nombre={p.nombre} />
