@@ -877,13 +877,21 @@ export async function updateDedicatoria(
 
   if (isSupabaseConfigured) {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("dedicatorias")
         .update({ autor: autorLimpio, texto: textoLimpio })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
       if (error) {
         console.error("[Supabase] Error al editar dedicatoria:", error);
         return { success: false, error: error.message };
+      }
+      if (!data || data.length === 0) {
+        return {
+          success: false,
+          error:
+            "Supabase no actualizó el registro (falta política RLS FOR UPDATE en la tabla dedicatorias).",
+        };
       }
       return { success: true };
     } catch (err: any) {

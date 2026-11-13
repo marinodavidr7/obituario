@@ -87,6 +87,7 @@ CREATE POLICY "Permitir actualización de personas" ON personas FOR UPDATE USING
 CREATE POLICY "Permitir eliminación de personas" ON personas FOR DELETE USING (true);
 
 CREATE POLICY "Permitir inserción de dedicatorias" ON dedicatorias FOR INSERT WITH CHECK (true);
+CREATE POLICY "Permitir actualización de dedicatorias" ON dedicatorias FOR UPDATE USING (true);
 CREATE POLICY "Permitir eliminación de dedicatorias" ON dedicatorias FOR DELETE USING (true);
 
 CREATE POLICY "Permitir actualización de config" ON config FOR ALL USING (true);
