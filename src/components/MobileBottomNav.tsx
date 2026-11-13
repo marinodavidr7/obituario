@@ -24,6 +24,8 @@ export default function MobileBottomNav() {
   const isFamilia = route.name === "familia";
   const isPersona = route.name === "persona";
 
+  if (isPersona) return null;
+
   return (
     <nav
       aria-label="Navegación móvil"
