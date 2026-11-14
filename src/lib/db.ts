@@ -8,6 +8,7 @@ import type {
   TrackActivoInfo,
   TrackRotacion,
   Video,
+  VinculoFamiliar,
 } from "@/types";
 import { initialDedicatorias, initialFamilias, initialPersonas } from "@/data/seed";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
@@ -22,7 +23,17 @@ import {
   broadcastFamiliaActualizada,
 } from "./realtime";
 
-export type { Dato, Dedicatoria, Familia, FotoPendiente, Persona, TrackActivoInfo, TrackRotacion, Video };
+export type {
+  Dato,
+  Dedicatoria,
+  Familia,
+  FotoPendiente,
+  Persona,
+  TrackActivoInfo,
+  TrackRotacion,
+  Video,
+  VinculoFamiliar,
+};
 
 const STORAGE_KEY_FAMILIAS = "panteon_familias_v1";
 const STORAGE_KEY_PERSONAS = "panteon_personas_v1";
@@ -1039,6 +1050,70 @@ export async function rechazarFotoPendiente(
       return { success: true };
     } catch (err: any) {
       return { success: false, error: err?.message || "Error al rechazar foto" };
+    }
+  }
+  return { success: true };
+}
+
+function parseVinculosMap(raw: string | null | undefined): Record<string, VinculoFamiliar[]> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getVinculosPersona(personaId: string): VinculoFamiliar[] {
+  const mapa = parseVinculosMap(cachedConfig["vinculos_familiares"]);
+  return Array.isArray(mapa[personaId]) ? mapa[personaId] : [];
+}
+
+export async function setVinculosPersona(
+  personaId: string,
+  vinculos: VinculoFamiliar[]
+): Promise<{ success: boolean; error?: string }> {
+  let mapa = parseVinculosMap(cachedConfig["vinculos_familiares"]);
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data } = await supabase
+        .from("config")
+        .select("valor")
+        .eq("clave", "vinculos_familiares")
+        .maybeSingle();
+      if (data && typeof data.valor === "string") {
+        mapa = parseVinculosMap(data.valor);
+      }
+    } catch {
+      // fallback to local cache
+    }
+  }
+
+  const limpios = vinculos.filter((v) => v.persona_id && v.persona_id !== personaId && v.relacion.trim());
+  if (limpios.length === 0) {
+    delete mapa[personaId];
+  } else {
+    mapa[personaId] = limpios.map((v) => ({
+      persona_id: v.persona_id,
+      relacion: v.relacion.trim(),
+    }));
+  }
+
+  const serialized = JSON.stringify(mapa);
+  cachedConfig["vinculos_familiares"] = serialized;
+  saveState();
+  window.dispatchEvent(new Event("panteon:db-updated"));
+
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from("config")
+        .upsert({ clave: "vinculos_familiares", valor: serialized });
+      if (error) return { success: false, error: error.message };
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Error al guardar vínculos" };
     }
   }
   return { success: true };

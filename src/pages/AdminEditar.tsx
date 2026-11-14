@@ -9,10 +9,13 @@ import {
   aprobarFotoPendiente,
   deletePersona,
   getPersona,
+  getVinculosPersona,
   listDedicatorias,
   listFamilias,
   listFotosPendientes,
+  listPersonas,
   rechazarFotoPendiente,
+  setVinculosPersona,
 } from "@/lib/db";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { editarPersona } from "@/lib/actions";
@@ -26,6 +29,11 @@ export default function AdminEditar({ id }: { id: string }) {
   const [error, setError] = useState<string | undefined>();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [, setTick] = useState(0);
+  const [vinculoPersonaId, setVinculoPersonaId] = useState("");
+  const [vinculoBusqueda, setVinculoBusqueda] = useState("");
+  const [vinculoDropdownAbierto, setVinculoDropdownAbierto] = useState(false);
+  const [vinculoRelacion, setVinculoRelacion] = useState("Esposo/a");
+  const [guardandoVinculo, setGuardandoVinculo] = useState(false);
   const familias = listFamilias().map((f) => ({ id: f.id, apellido: f.apellido }));
 
   useEffect(() => {
@@ -209,6 +217,179 @@ export default function AdminEditar({ id }: { id: string }) {
                   </div>
                 </div>
               ))}
+            </div>
+          </section>
+        );
+      })()}
+
+      {/* Vínculos Familiares (Árbol de memorias) */}
+      {(() => {
+        const vinculos = getVinculosPersona(persona.id);
+        const candidatas = listPersonas().filter((item) => item.id !== persona.id);
+        const relacionesSugeridas = [
+          "Esposo/a",
+          "Padre",
+          "Madre",
+          "Hijo/a",
+          "Hermano/a",
+          "Abuelo/a",
+          "Nieto/a",
+          "Tío/a",
+          "Primo/a",
+        ];
+
+        return (
+          <section className="mt-10 p-5 sm:p-6 rounded-2xl border border-white/10 bg-stone-900/50 space-y-4">
+            <div>
+              <h2 className="font-serif text-xl text-stone-100">
+                🌿 Vínculos Familiares (Árbol de Memorias)
+              </h2>
+              <p className="text-xs text-stone-400">
+                Conecta este perfil con otros seres queridos del santuario para navegar entre familiares con un clic.
+              </p>
+            </div>
+
+            {vinculos.length > 0 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {vinculos.map((v, idx) => {
+                  const famPersona = getPersona(v.persona_id);
+                  return (
+                    <div
+                      key={`${v.persona_id}-${idx}`}
+                      className="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl border border-white/10 bg-stone-950/60"
+                    >
+                      <div className="min-w-0">
+                        <span className="text-[10px] uppercase tracking-wider text-gold-soft bg-gold/10 border border-gold/25 px-2 py-0.5 rounded-full">
+                          {v.relacion}
+                        </span>
+                        <p className="text-sm text-stone-100 font-serif mt-1 truncate">
+                          {famPersona?.nombre || v.persona_id}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        disabled={guardandoVinculo}
+                        onClick={async () => {
+                          setGuardandoVinculo(true);
+                          const nuevos = vinculos.filter((_, i) => i !== idx);
+                          const res = await setVinculosPersona(persona.id, nuevos);
+                          setGuardandoVinculo(false);
+                          if (res.success) {
+                            toast("Vínculo eliminado", "delete");
+                          } else {
+                            toast(res.error || "No se pudo eliminar el vínculo", "warning");
+                          }
+                        }}
+                        className="px-2.5 py-1 rounded-full border border-rose-500/35 text-[10px] uppercase tracking-wider text-rose-300 hover:bg-rose-500/15 cursor-pointer shrink-0"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              <select
+                value={vinculoRelacion}
+                onChange={(e) => setVinculoRelacion(e.target.value)}
+                className="bg-stone-950 border border-white/15 focus:border-gold rounded-lg px-3 py-2 text-xs text-stone-100 focus:outline-none"
+              >
+                {relacionesSugeridas.map((rel) => (
+                  <option key={rel} value={rel}>
+                    {rel}
+                  </option>
+                ))}
+              </select>
+
+              <div className="relative">
+                <input
+                  type="text"
+                  value={vinculoBusqueda}
+                  onFocus={() => setVinculoDropdownAbierto(true)}
+                  onBlur={() => setTimeout(() => setVinculoDropdownAbierto(false), 150)}
+                  onChange={(e) => {
+                    setVinculoBusqueda(e.target.value);
+                    setVinculoPersonaId("");
+                    setVinculoDropdownAbierto(true);
+                  }}
+                  placeholder="🔍 Buscar familiar por nombre o año..."
+                  className="w-full bg-stone-950 border border-white/15 focus:border-gold rounded-lg px-3 py-2 text-xs text-stone-100 focus:outline-none"
+                />
+                {vinculoDropdownAbierto && (
+                  <div className="absolute left-0 right-0 mt-1 max-h-52 overflow-y-auto rounded-xl border border-gold/30 bg-[#0d1117] shadow-2xl z-30 divide-y divide-white/5">
+                    {(() => {
+                      const q = vinculoBusqueda.trim().toLowerCase();
+                      const filtradas = candidatas.filter(
+                        (c) =>
+                          !q ||
+                          c.nombre.toLowerCase().includes(q) ||
+                          (c.apodo && c.apodo.toLowerCase().includes(q)) ||
+                          c.anios.toLowerCase().includes(q)
+                      );
+                      if (filtradas.length === 0) {
+                        return (
+                          <div className="px-3 py-2.5 text-xs text-stone-500 italic">
+                            No se encontraron familiares con "{vinculoBusqueda}".
+                          </div>
+                        );
+                      }
+                      return filtradas.map((c) => (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setVinculoPersonaId(c.id);
+                            setVinculoBusqueda(`${c.nombre} (${c.anios})`);
+                            setVinculoDropdownAbierto(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 text-xs hover:bg-gold/15 flex items-center justify-between gap-2 cursor-pointer transition-colors ${
+                            vinculoPersonaId === c.id ? "bg-gold/20 text-gold-soft" : "text-stone-200"
+                          }`}
+                        >
+                          <span className="truncate font-medium">{c.nombre}</span>
+                          <span className="text-[10px] text-stone-400 shrink-0">{c.anios}</span>
+                        </button>
+                      ));
+                    })()}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                disabled={!vinculoPersonaId || guardandoVinculo}
+                onClick={async () => {
+                  if (!vinculoPersonaId) return;
+                  setGuardandoVinculo(true);
+                  const yaExiste = vinculos.some(
+                    (v) => v.persona_id === vinculoPersonaId && v.relacion === vinculoRelacion
+                  );
+                  if (yaExiste) {
+                    setGuardandoVinculo(false);
+                    toast("Ese vínculo ya está agregado", "warning");
+                    return;
+                  }
+                  const nuevos = [
+                    ...vinculos,
+                    { persona_id: vinculoPersonaId, relacion: vinculoRelacion },
+                  ];
+                  const res = await setVinculosPersona(persona.id, nuevos);
+                  setGuardandoVinculo(false);
+                  if (res.success) {
+                    setVinculoPersonaId("");
+                    setVinculoBusqueda("");
+                    toast("Vínculo familiar guardado", "success");
+                  } else {
+                    toast(res.error || "No se pudo guardar el vínculo", "warning");
+                  }
+                }}
+                className="px-4 py-2 rounded-lg bg-gold/20 hover:bg-gold/30 disabled:opacity-40 border border-gold/45 text-gold-soft text-xs uppercase tracking-wider cursor-pointer"
+              >
+                {guardandoVinculo ? "Guardando..." : "+ Agregar vínculo"}
+              </button>
             </div>
           </section>
         );

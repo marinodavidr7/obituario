@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/Link";
 import Altar from "@/components/Altar";
+import CompartirHomenaje from "@/components/CompartirHomenaje";
 import Dedicatorias from "@/components/Dedicatorias";
 import Gallery from "@/components/Gallery";
 import SubirFotoFamiliar from "@/components/SubirFotoFamiliar";
@@ -9,11 +10,17 @@ import PersonaAudioWatcher from "@/components/PersonaAudioWatcher";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import { applySoulTheme, clearSoulTheme, getGeneralSanctuaryTheme } from "@/lib/theme";
-import { addVisita, deletePersona, getFamilia, getPersona, listDedicatorias, listPersonas } from "@/lib/db";
+import { addVisita, deletePersona, getFamilia, getPersona, getVinculosPersona, listDedicatorias, listPersonas } from "@/lib/db";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useAdmin } from "@/lib/auth";
 import { navigate } from "@/lib/router";
-import { extractYouTubeId, iniciales } from "@/lib/utils";
+import {
+  calcularCumpleanos,
+  calcularTiempoDesdePartida,
+  extractYouTubeId,
+  iniciales,
+  parseFechasVida,
+} from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import type { Dedicatoria, Familia, Persona } from "@/types";
 
@@ -379,8 +386,52 @@ export default function PersonaView({ id }: { id: string }) {
                 ✦ {p.fechas}
               </div>
             )}
+            {(() => {
+              const { nacimiento, partida } = parseFechasVida(p.fechas);
+              const tiempo = partida ? calcularTiempoDesdePartida(partida) : null;
+              const cumple = nacimiento ? calcularCumpleanos(nacimiento) : null;
+              if (!tiempo && !cumple) return null;
+              return (
+                <div className="mt-2.5 flex flex-col items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    {tiempo && (
+                      <span
+                        className={`inline-flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full border ${
+                          tiempo.esAniversarioHoy
+                            ? "border-amber-400/50 bg-amber-500/15 text-amber-200 font-medium"
+                            : "border-white/10 bg-stone-900/70 text-stone-300"
+                        }`}
+                      >
+                        <span>{tiempo.esAniversarioHoy ? "🕯️" : "🕊️"}</span>
+                        <span>
+                          {tiempo.esAniversarioHoy
+                            ? `Hoy se cumplen ${tiempo.anios} ${tiempo.anios === 1 ? "año" : "años"} de su partida`
+                            : `${tiempo.texto} de su partida`}
+                        </span>
+                      </span>
+                    )}
+                    {cumple && !cumple.esHoy && (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] px-3 py-1 rounded-full border border-white/10 bg-stone-900/70 text-stone-300">
+                        <span>🎂</span>
+                        <span>
+                          Natalicio: {cumple.fechaTexto} ·{" "}
+                          {cumple.diasRestantes === 1
+                            ? "mañana"
+                            : `en ${cumple.diasRestantes} días`}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+                  {cumple?.esHoy && (
+                    <div className="w-full rounded-xl border border-gold/45 bg-gradient-to-r from-amber-500/15 via-gold/15 to-amber-500/15 px-3.5 py-2.5 text-xs text-gold-soft shadow-[0_0_20px_rgba(201,168,106,0.2)]">
+                      🎂✨ <b>Hoy celebramos su cumpleaños en memoria</b> ({cumple.edadCumpliria} años). Enciende una vela o déjale una dedicatoria especial.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             {p.epitafio && (
-              <blockquote className="font-serif italic text-base sm:text-xl text-gold-soft mt-3 sm:mt-4 px-2">
+              <blockquote className="font-sans text-[15px] sm:text-[17px] font-normal leading-relaxed tracking-wide text-[#f3e6cb] mt-3.5 sm:mt-4 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-gold/15">
                 “{p.epitafio}”
               </blockquote>
             )}
@@ -435,6 +486,12 @@ export default function PersonaView({ id }: { id: string }) {
                 {p.bio}
               </p>
             )}
+            <CompartirHomenaje
+              personaId={p.id}
+              nombre={p.nombre}
+              anios={p.anios}
+              familiaApellido={fam.apellido}
+            />
           </div>
 
           {Array.isArray(p.datos) && p.datos.length > 0 && (
@@ -457,6 +514,52 @@ export default function PersonaView({ id }: { id: string }) {
               </dl>
             </section>
           )}
+
+          {(() => {
+            const vinculos = getVinculosPersona(p.id)
+              .map((v) => ({ ...v, persona: getPersona(v.persona_id) }))
+              .filter((v): v is { persona_id: string; relacion: string; persona: Persona } =>
+                Boolean(v.persona && (v.persona.estado === "publicado" || !v.persona.estado))
+              );
+            if (vinculos.length === 0) return null;
+            return (
+              <section className="mt-6 sm:mt-8">
+                <Titulo>Árbol de Memorias</Titulo>
+                <div className="space-y-2">
+                  {vinculos.map((v) => (
+                    <Link
+                      key={`${v.persona_id}-${v.relacion}`}
+                      href={`/persona/${v.persona.id}`}
+                      className="flex items-center gap-3 p-2.5 rounded-xl border border-white/10 hover:border-gold/45 bg-stone-900/60 hover:bg-stone-900 transition-all group"
+                    >
+                      <div className="w-10 h-10 rounded-full overflow-hidden border border-gold/30 bg-stone-950 shrink-0 grid place-items-center text-xs font-serif text-gold">
+                        {v.persona.foto ? (
+                          <img
+                            src={v.persona.foto}
+                            alt={v.persona.nombre}
+                            style={{ objectPosition: v.persona.foto_pos || "50% 20%" }}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          iniciales(v.persona.nombre)
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="inline-block text-[9px] uppercase tracking-[0.18em] text-gold-soft bg-gold/10 border border-gold/25 px-2 py-0.5 rounded-full mb-0.5">
+                          {v.relacion}
+                        </span>
+                        <p className="text-xs sm:text-sm font-serif text-stone-100 group-hover:text-gold-soft truncate">
+                          {v.persona.nombre}
+                        </p>
+                        <p className="text-[10px] text-stone-400">{v.persona.anios}</p>
+                      </div>
+                      <span className="text-stone-500 group-hover:text-gold text-xs pr-1">→</span>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            );
+          })()}
         </aside>
 
         <div className="min-w-0 space-y-6 sm:space-y-9">

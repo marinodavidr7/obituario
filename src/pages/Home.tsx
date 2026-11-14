@@ -3,6 +3,7 @@ import Link from "@/components/Link";
 import Ornament from "@/components/Ornament";
 import PanteonTabsView from "@/components/PanteonTabsView";
 import { listFamilias, listPersonas, stats } from "@/lib/db";
+import { calcularCumpleanos, parseFechasVida } from "@/lib/utils";
 import type { Familia, Persona, SanctuaryStats } from "@/types";
 
 export default function Home() {
@@ -79,6 +80,51 @@ export default function Home() {
           </Link>
         </div>
       </header>
+
+      {/* Recordatorio de cumpleaños / natalicios de hoy o próximos 14 días */}
+      {(() => {
+        const cumples = personas
+          .map((p) => {
+            const { nacimiento } = parseFechasVida(p.fechas);
+            if (!nacimiento) return null;
+            return { persona: p, info: calcularCumpleanos(nacimiento) };
+          })
+          .filter((x): x is { persona: Persona & { apellido: string }; info: ReturnType<typeof calcularCumpleanos> } =>
+            Boolean(x && x.info.diasRestantes <= 14)
+          )
+          .sort((a, b) => a.info.diasRestantes - b.info.diasRestantes);
+
+        if (cumples.length === 0) return null;
+
+        return (
+          <div className="max-w-4xl mx-auto mt-4 mb-2 px-2">
+            <div className="rounded-2xl border border-gold/30 bg-gradient-to-r from-stone-900/90 via-amber-950/20 to-stone-900/90 px-4 py-3 shadow-lg">
+              <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
+                <span className="text-gold-soft font-medium uppercase tracking-wider text-[11px]">
+                  🎂 Natalicios en memoria:
+                </span>
+                {cumples.map(({ persona, info }) => (
+                  <Link
+                    key={persona.id}
+                    href={`/persona/${persona.id}`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border transition-all ${
+                      info.esHoy
+                        ? "border-gold/60 bg-gold/20 text-gold-soft font-medium shadow-[0_0_12px_rgba(201,168,106,0.25)]"
+                        : "border-white/10 bg-stone-950/60 text-stone-300 hover:border-gold/40 hover:text-gold-soft"
+                    }`}
+                  >
+                    <span>{info.esHoy ? "✨ Hoy:" : `${info.fechaTexto}:`}</span>
+                    <span>{persona.nombre}</span>
+                    <span className="text-[10px] text-stone-400">
+                      ({info.edadCumpliria} años)
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Selector de modo de vista: Por Apellidos / Todas las Almas / Línea del Tiempo */}
       <PanteonTabsView familias={familias} todasLasPersonas={personas} />

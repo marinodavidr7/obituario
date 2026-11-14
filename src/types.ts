@@ -1,5 +1,6 @@
 export type Dato = [string, string];
 export type Video = { titulo: string; fuente?: string; url: string };
+export type VinculoFamiliar = { persona_id: string; relacion: string };
 
 export type TrackRotacion = {
   id: string;
