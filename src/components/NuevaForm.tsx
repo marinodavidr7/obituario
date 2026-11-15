@@ -5,7 +5,13 @@ import TerminosModal from "@/components/TerminosModal";
 import FotoCropModal from "@/components/FotoCropModal";
 import { extractYouTubeId, parseYouTubeStartSeconds, iniciales } from "@/lib/utils";
 import { DECORACIONES } from "@/lib/decoraciones";
-import { getDecoracionPersona, getPerfilPolicial, type Persona } from "@/lib/db";
+import {
+  esPerfilPolicial,
+  getDecoracionPersona,
+  setDecoracionPersona,
+  setPerfilPolicial,
+  type Persona,
+} from "@/lib/db";
 import EscudoPolicia from "@/components/EscudoPolicia";
 
 type Familia = { id: string; apellido: string };
@@ -52,7 +58,7 @@ export default function NuevaForm({
   const [decoracion, setDecoracion] = useState<string>(() =>
     personaInicial?.id ? getDecoracionPersona(personaInicial.id) : "ninguna"
   );
-  const policialInicial = personaInicial?.id ? getPerfilPolicial(personaInicial.id) : null;
+  const policialInicial = personaInicial ? esPerfilPolicial(personaInicial) : null;
   const [esPolicia, setEsPolicia] = useState<boolean>(Boolean(policialInicial?.es_policia));
   const [rangoPolicial, setRangoPolicial] = useState<string>(policialInicial?.rango || "");
   const [nombre, setNombre] = useState(personaInicial?.nombre || "");
@@ -912,51 +918,67 @@ export default function NuevaForm({
           </p>
           <ColorPickerGrid value={color} onChange={setColor} name="color" showDesc={false} />
 
-          {/* Homenaje Institucional: Policía Nacional RD */}
-          <div className="mt-5 pt-4 border-t border-white/10">
-            <input type="hidden" name="es_policia" value={esPolicia ? "1" : "0"} />
-            <label className="flex items-start gap-3 p-3 rounded-xl border border-[#d4af37]/35 bg-[#122238]/60 hover:bg-[#122238]/90 cursor-pointer transition-colors">
-              <input
-                type="checkbox"
-                checked={esPolicia}
-                onChange={(e) => {
-                  const checked = e.target.checked;
-                  setEsPolicia(checked);
-                  if (checked && !epitafio.trim()) {
-                    setEpitafio(
-                      "Cumplió su deber con honor, valentía y lealtad. Hoy descansa en la guardia eterna."
-                    );
-                  }
-                }}
-                className="mt-0.5 w-4 h-4 accent-[#d4af37] cursor-pointer"
-              />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <EscudoPolicia className="w-5 h-5 shrink-0" />
-                  <span className="text-xs font-medium text-[#f0d77a] uppercase tracking-wider">
-                    Homenaje Policía Nacional RD
-                  </span>
-                </div>
-                <p className="text-[11px] text-stone-300 mt-1 leading-relaxed">
-                  Activa la paleta institucional azul marino y dorado, escudo oficial, rango y botón para rendir honores.
-                </p>
-              </div>
-            </label>
+          <input type="hidden" name="es_policia" value={esPolicia ? "1" : "0"} />
 
-            {esPolicia && (
-              <div className="mt-3">
-                <label className={lab}>Rango y Unidad Institucional</label>
+          {/* Homenaje Institucional: Policía Nacional RD (solo visible si se selecciona Policía / Militar) */}
+          {(decoracion === "militar" || esPolicia) && (
+            <div className="mt-5 pt-4 border-t border-white/10">
+              <label className="flex items-start gap-3 p-3 rounded-xl border border-[#d4af37]/35 bg-[#122238]/60 hover:bg-[#122238]/90 cursor-pointer transition-colors">
                 <input
-                  type="text"
-                  name="rango_policial"
-                  value={rangoPolicial}
-                  onChange={(e) => setRangoPolicial(e.target.value)}
-                  placeholder="Ej: Sargento Mayor • Guardia de Honor"
-                  className={inp}
+                  type="checkbox"
+                  checked={esPolicia}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setEsPolicia(checked);
+                    const nextDec = checked ? "militar" : decoracion === "militar" ? "ninguna" : decoracion;
+                    if (checked) {
+                      setDecoracion("militar");
+                      if (!epitafio.trim()) {
+                        setEpitafio(
+                          "Cumplió su deber con honor, valentía y lealtad. Hoy descansa en la guardia eterna."
+                        );
+                      }
+                    } else if (decoracion === "militar") {
+                      setDecoracion("ninguna");
+                    }
+                    if (personaInicial?.id) {
+                      setDecoracionPersona(personaInicial.id, nextDec).catch(() => {});
+                      setPerfilPolicial(personaInicial.id, {
+                        es_policia: checked,
+                        rango: checked ? rangoPolicial : "",
+                      }).catch(() => {});
+                    }
+                  }}
+                  className="mt-0.5 w-4 h-4 accent-[#d4af37] cursor-pointer"
                 />
-              </div>
-            )}
-          </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <EscudoPolicia className="w-5 h-5 shrink-0" />
+                    <span className="text-xs font-medium text-[#f0d77a] uppercase tracking-wider">
+                      Homenaje Policía Nacional RD
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-stone-300 mt-1 leading-relaxed">
+                    Activa la paleta institucional azul marino y dorado, escudo oficial, rango y botón para rendir honores.
+                  </p>
+                </div>
+              </label>
+
+              {esPolicia && (
+                <div className="mt-3">
+                  <label className={lab}>Rango y Unidad Institucional</label>
+                  <input
+                    type="text"
+                    name="rango_policial"
+                    value={rangoPolicial}
+                    onChange={(e) => setRangoPolicial(e.target.value)}
+                    placeholder="Ej: Sargento Mayor • Guardia de Honor"
+                    className={inp}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="mt-5 pt-4 border-t border-white/10">
             <p className="text-[11px] uppercase tracking-[0.18em] text-gold-soft mb-1.5">
@@ -973,7 +995,23 @@ export default function NuevaForm({
                   <button
                     key={d.id}
                     type="button"
-                    onClick={() => setDecoracion(d.id)}
+                    onClick={() => {
+                      const esMil = d.id === "militar";
+                      setDecoracion(d.id);
+                      setEsPolicia(esMil);
+                      if (esMil && !epitafio.trim()) {
+                        setEpitafio(
+                          "Cumplió su deber con honor, valentía y lealtad. Hoy descansa en la guardia eterna."
+                        );
+                      }
+                      if (personaInicial?.id) {
+                        setDecoracionPersona(personaInicial.id, d.id).catch(() => {});
+                        setPerfilPolicial(personaInicial.id, {
+                          es_policia: esMil,
+                          rango: esMil ? rangoPolicial : "",
+                        }).catch(() => {});
+                      }
+                    }}
                     className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left text-[11px] transition-all cursor-pointer ${
                       activo
                         ? "border-gold/70 bg-gold/15 text-gold-soft shadow-[0_0_12px_rgba(201,168,106,0.2)]"

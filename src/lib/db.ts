@@ -1207,8 +1207,15 @@ export function getPerfilPolicial(personaId: string): PerfilPolicialInfo {
 
 export function esPerfilPolicial(p: Persona | null | undefined): PerfilPolicialInfo {
   if (!p) return { es_policia: false, rango: "", honores: 0 };
+  const mapa = parsePolicialMap(cachedConfig["perfiles_policia"]);
+  const tieneRegistroExplicito = Object.prototype.hasOwnProperty.call(mapa, p.id);
   const guardado = getPerfilPolicial(p.id);
   const dec = getDecoracionPersona(p.id);
+
+  // Si el administrador desactivó explícitamente el modo policial (ej. cambió a Clásico), respetarlo
+  if (tieneRegistroExplicito && !guardado.es_policia && dec !== "militar") {
+    return { es_policia: false, rango: "", honores: guardado.honores };
+  }
 
   let rangoDetectado = guardado.rango;
   let detectadoEnDatos = false;
@@ -1265,7 +1272,11 @@ export async function setPerfilPolicial(
 
   const prev = mapa[personaId];
   if (!info.es_policia) {
-    delete mapa[personaId];
+    mapa[personaId] = {
+      es_policia: false,
+      rango: "",
+      honores: typeof prev?.honores === "number" ? prev.honores : 0,
+    };
   } else {
     mapa[personaId] = {
       es_policia: true,

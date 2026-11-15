@@ -335,13 +335,19 @@ export default function PersonaView({ id }: { id: string }) {
             const policial = esPerfilPolicial(p);
             const dec = getDecoracionInfo(getDecoracionPersona(p.id));
             return (
-              <div className="relative w-56 xs:w-64 sm:w-60 lg:w-72 xl:w-80 2xl:w-[350px] mx-auto">
+              <div
+                className={`relative w-56 xs:w-64 sm:w-60 lg:w-72 xl:w-80 2xl:w-[350px] mx-auto ${
+                  policial.es_policia ? "mt-6 sm:mt-4" : ""
+                }`}
+              >
                 {policial.es_policia && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#181e24]/85 border border-[#d4af37]/55 backdrop-blur-md shadow-[0_6px_20px_rgba(0,0,0,0.65)] whitespace-nowrap">
-                    <EscudoPolicia className="w-5 h-5 shrink-0" />
-                    <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.22em] text-[#e6c770]">
-                      Policía Nacional RD
-                    </span>
+                  <div className="absolute -top-4 inset-x-0 z-20 flex justify-center pointer-events-none">
+                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#181e24]/90 border border-[#d4af37]/55 backdrop-blur-md shadow-[0_6px_20px_rgba(0,0,0,0.65)] whitespace-nowrap w-max select-none">
+                      <EscudoPolicia className="w-5 h-5 shrink-0" />
+                      <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.2em] text-[#e6c770] leading-none">
+                        Policía Nacional RD
+                      </span>
+                    </div>
                   </div>
                 )}
                 <div
