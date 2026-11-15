@@ -6,6 +6,8 @@ import {
   insertPersona,
   rechazarPersona,
   setConfig,
+  setDecoracionPersona,
+  setPerfilPolicial,
   slugify,
   updatePersona,
   upsertFamilia,
@@ -151,6 +153,9 @@ export async function procesarPersonaFormData(formData: FormData) {
     solicitante: s("solicitante") || null,
     contacto: s("contacto") || null,
     color: s("color") || null,
+    decoracion: s("decoracion") || "ninguna",
+    es_policia: s("es_policia") === "1",
+    rango_policial: s("rango_policial") || "",
   };
 }
 
@@ -196,6 +201,11 @@ export async function solicitarInscripcion(formData: FormData): Promise<void> {
     contacto: data.contacto,
     fecha_solicitud: fechaSolicitud,
   });
+  await setDecoracionPersona(data.id, data.decoracion).catch(() => {});
+  await setPerfilPolicial(data.id, {
+    es_policia: data.es_policia,
+    rango: data.rango_policial,
+  }).catch(() => {});
 
   // Notificación a Telegram en segundo plano para que la navegación sea instantánea
   notificarSolicitudTelegram(data.id).catch((err) => {
@@ -229,6 +239,11 @@ export async function crearPersona(formData: FormData): Promise<void> {
     color: data.color,
     estado: "publicado",
   });
+  await setDecoracionPersona(data.id, data.decoracion).catch(() => {});
+  await setPerfilPolicial(data.id, {
+    es_policia: data.es_policia,
+    rango: data.rango_policial,
+  }).catch(() => {});
 
   navigate("/admin");
 }
@@ -263,6 +278,11 @@ export async function editarPersona(id: string, formData: FormData): Promise<voi
   if (!res.success) {
     throw new Error(res.error?.message || res.error || "Error al actualizar ser querido");
   }
+  await setDecoracionPersona(id, data.decoracion).catch(() => {});
+  await setPerfilPolicial(id, {
+    es_policia: data.es_policia,
+    rango: data.rango_policial,
+  }).catch(() => {});
 
   navigate("/admin");
 }

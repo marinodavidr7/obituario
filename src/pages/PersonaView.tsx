@@ -3,6 +3,7 @@ import Link from "@/components/Link";
 import Altar from "@/components/Altar";
 import CompartirHomenaje from "@/components/CompartirHomenaje";
 import Dedicatorias from "@/components/Dedicatorias";
+import EscudoPolicia from "@/components/EscudoPolicia";
 import Gallery from "@/components/Gallery";
 import SubirFotoFamiliar from "@/components/SubirFotoFamiliar";
 import Videos from "@/components/Videos";
@@ -10,7 +11,8 @@ import PersonaAudioWatcher from "@/components/PersonaAudioWatcher";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import { applySoulTheme, clearSoulTheme, getGeneralSanctuaryTheme } from "@/lib/theme";
-import { addVisita, deletePersona, getFamilia, getPersona, getVinculosPersona, listDedicatorias, listPersonas } from "@/lib/db";
+import { addVisita, deletePersona, esPerfilPolicial, getDecoracionPersona, getFamilia, getPersona, getVinculosPersona, listDedicatorias, listPersonas } from "@/lib/db";
+import { getDecoracionInfo } from "@/lib/decoraciones";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useAdmin } from "@/lib/auth";
 import { navigate } from "@/lib/router";
@@ -156,8 +158,13 @@ export default function PersonaView({ id }: { id: string }) {
 
       setPersona(pNormalizado);
 
-      // Aplicar el color sagrado asignado a este ser querido
-      const colorDestino = p.color && p.color !== "default" ? p.color : getGeneralSanctuaryTheme();
+      // Aplicar el color sagrado asignado a este ser querido (o paleta institucional si es Policía Nacional)
+      const policialInfo = esPerfilPolicial(pNormalizado);
+      const colorDestino = policialInfo.es_policia
+        ? "policia-nacional"
+        : p.color && p.color !== "default"
+        ? p.color
+        : getGeneralSanctuaryTheme();
       applySoulTheme(colorDestino);
 
       let f = getFamilia(p.familia_id);
@@ -324,27 +331,67 @@ export default function PersonaView({ id }: { id: string }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,28%)_1fr] xl:grid-cols-[380px_1fr] 2xl:grid-cols-[440px_1fr] gap-6 sm:gap-8 xl:gap-12 2xl:gap-16 items-start">
         <aside className="lg:sticky lg:top-24 min-w-0">
-          <div
-            style={{
-              transform: `translateX(${swipeOffset}px)`,
-              transition: swipeOffset === 0 ? "transform 250ms ease-out" : "none",
-            }}
-            className="w-56 xs:w-64 sm:w-60 lg:w-72 xl:w-80 2xl:w-[350px] aspect-[3/4] mx-auto rounded-t-[130px] xs:rounded-t-[150px] sm:rounded-t-[140px] xl:rounded-t-[180px] rounded-b-2xl overflow-hidden border-2 border-gold/50 bg-gradient-to-b from-[#2b323b] to-[#11151a] shadow-2xl grid place-items-center relative"
-          >
-            {p.foto ? (
-              <img
-                src={p.foto}
-                alt={`Retrato de ${p.nombre}`}
-                style={{ objectPosition: p.foto_pos || "50% 20%" }}
-                loading="eager"
-                decoding="async"
-                className={`w-full h-full object-cover ${p.foto.toLowerCase().includes(".gif") ? "" : "grayscale-[20%]"} contrast-105 transition-opacity duration-300`}
-              />
-            ) : (
-              <span className="font-serif text-5xl sm:text-6xl text-gold/80">{iniciales(p.nombre)}</span>
-            )}
-            <div className="absolute inset-0 shadow-[inset_0_-60px_60px_-25px_rgba(0,0,0,0.8)] pointer-events-none" />
-          </div>
+          {(() => {
+            const policial = esPerfilPolicial(p);
+            const dec = getDecoracionInfo(getDecoracionPersona(p.id));
+            return (
+              <div className="relative w-56 xs:w-64 sm:w-60 lg:w-72 xl:w-80 2xl:w-[350px] mx-auto">
+                {policial.es_policia && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#181e24]/85 border border-[#d4af37]/55 backdrop-blur-md shadow-[0_6px_20px_rgba(0,0,0,0.65)] whitespace-nowrap">
+                    <EscudoPolicia className="w-5 h-5 shrink-0" />
+                    <span className="text-[10px] sm:text-[11px] font-medium uppercase tracking-[0.22em] text-[#e6c770]">
+                      Policía Nacional RD
+                    </span>
+                  </div>
+                )}
+                <div
+                  style={{
+                    transform: `translateX(${swipeOffset}px)`,
+                    transition: swipeOffset === 0 ? "transform 250ms ease-out" : "none",
+                  }}
+                  className={`w-full aspect-[3/4] rounded-t-[130px] xs:rounded-t-[150px] sm:rounded-t-[140px] xl:rounded-t-[180px] rounded-b-2xl overflow-hidden border-2 ${
+                    policial.es_policia ? "border-[#d4af37]/75" : "border-gold/50"
+                  } bg-gradient-to-b from-[#2b323b] to-[#11151a] shadow-2xl grid place-items-center relative`}
+                >
+                  {p.foto ? (
+                    <img
+                      src={p.foto}
+                      alt={`Retrato de ${p.nombre}`}
+                      style={{ objectPosition: p.foto_pos || "50% 20%" }}
+                      loading="eager"
+                      decoding="async"
+                      className={`w-full h-full object-cover ${
+                        policial.es_policia || p.foto.toLowerCase().includes(".gif") ? "" : "grayscale-[20%]"
+                      } contrast-105 transition-opacity duration-300`}
+                    />
+                  ) : (
+                    <span className="font-serif text-5xl sm:text-6xl text-gold/80">{iniciales(p.nombre)}</span>
+                  )}
+                  <div className="absolute inset-0 shadow-[inset_0_-60px_60px_-25px_rgba(0,0,0,0.8)] pointer-events-none" />
+                  {policial.es_policia ? (
+                    <span className="absolute bottom-3.5 right-3.5 z-20 w-12 h-12 rounded-full bg-[#0a121f]/85 border border-[#d4af37]/75 backdrop-blur-md grid place-items-center shadow-xl pointer-events-none">
+                      <EscudoPolicia className="w-8 h-8" />
+                    </span>
+                  ) : dec.id !== "ninguna" ? (
+                    <>
+                      <span className="absolute top-3 left-3 w-8 h-8 rounded-full bg-stone-950/80 border border-gold/40 backdrop-blur-sm grid place-items-center text-base shadow-lg pointer-events-none">
+                        {dec.cornerIcons[0]}
+                      </span>
+                      <span className="absolute top-3 right-3 w-8 h-8 rounded-full bg-stone-950/80 border border-gold/40 backdrop-blur-sm grid place-items-center text-base shadow-lg pointer-events-none">
+                        {dec.cornerIcons[1]}
+                      </span>
+                      <span className="absolute bottom-3 left-3 w-8 h-8 rounded-full bg-stone-950/80 border border-gold/40 backdrop-blur-sm grid place-items-center text-base shadow-lg pointer-events-none">
+                        {dec.cornerIcons[2]}
+                      </span>
+                      <span className="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-stone-950/80 border border-gold/40 backdrop-blur-sm grid place-items-center text-base shadow-lg pointer-events-none">
+                        {dec.cornerIcons[3]}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Indicador visual de swipe táctil en móvil */}
           {hasMultipleHermanos && prev && next && (
@@ -373,13 +420,44 @@ export default function PersonaView({ id }: { id: string }) {
 
           <div className="text-center pt-5 sm:pt-6">
             <div className="flex flex-wrap items-center justify-center gap-2.5 mb-1.5">
-              <span className="text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.28em] text-gold/80">
-                Obituario de la Familia {fam.apellido}
+              <span className="text-[10px] uppercase tracking-[0.25em] sm:tracking-[0.28em] text-gold/85">
+                {esPerfilPolicial(p).es_policia
+                  ? "En honor al servicio y la patria"
+                  : `Obituario de la Familia ${fam.apellido}`}
               </span>
             </div>
             <h1 className="font-serif text-2xl sm:text-4xl text-[#f4f1eb] tracking-wide leading-tight">
               {p.nombre}
             </h1>
+            {(() => {
+              const policial = esPerfilPolicial(p);
+              const dec = getDecoracionInfo(getDecoracionPersona(p.id));
+              if (policial.es_policia) {
+                return (
+                  <div className="mt-2.5 flex justify-center">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-medium tracking-[0.06em] px-4 py-1.5 rounded-full border border-[#d4af37]/45 bg-[#1b2126]/85 text-[#e6c770] shadow-[0_0_15px_rgba(212,175,55,0.12)]">
+                      <span>🛡️</span>
+                      <span>
+                        {policial.rango
+                          ? `Policía Nacional • ${policial.rango}`
+                          : "Policía Nacional • Guardia de Honor"}
+                      </span>
+                    </span>
+                  </div>
+                );
+              }
+              if (dec.id === "ninguna") return null;
+              return (
+                <div className="mt-2 flex justify-center">
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.16em] px-3 py-1 rounded-full border ${dec.accentClass}`}
+                  >
+                    <span>{dec.icon}</span>
+                    <span>{dec.badgeText}</span>
+                  </span>
+                </div>
+              );
+            })()}
             {p.apodo && <p className="text-xs sm:text-sm italic text-gold mt-1">«{p.apodo}»</p>}
             {p.fechas && (
               <div className="inline-flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs tracking-[0.1em] text-stone-300 mt-2.5 sm:mt-3 px-3.5 sm:px-4 py-1.5 rounded-full border border-white/10 bg-stone-950/50">
@@ -586,6 +664,8 @@ export default function PersonaView({ id }: { id: string }) {
             visitas={p.visitas}
             floresTipos={p.flores_tipos}
             nombre={p.nombre}
+            esPolicia={esPerfilPolicial(p).es_policia}
+            honores={esPerfilPolicial(p).honores}
           />
           <section>
             <Titulo>Libro de Recuerdos y Dedicatorias</Titulo>

@@ -10,7 +10,8 @@ export type ThemeId =
   | "rosado"
   | "amarillo"
   | "morado"
-  | "verde";
+  | "verde"
+  | "policia-nacional";
 
 export interface ThemeOption {
   id: ThemeId;
@@ -97,6 +98,7 @@ const VALID_THEMES: ThemeId[] = [
   "amarillo",
   "morado",
   "verde",
+  "policia-nacional",
 ];
 
 const THEME_STORAGE_KEY = "panteon_theme";

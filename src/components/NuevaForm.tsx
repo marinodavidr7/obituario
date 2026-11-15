@@ -4,7 +4,9 @@ import ColorPickerGrid from "@/components/ColorPickerGrid";
 import TerminosModal from "@/components/TerminosModal";
 import FotoCropModal from "@/components/FotoCropModal";
 import { extractYouTubeId, parseYouTubeStartSeconds, iniciales } from "@/lib/utils";
-import type { Persona } from "@/lib/db";
+import { DECORACIONES } from "@/lib/decoraciones";
+import { getDecoracionPersona, getPerfilPolicial, type Persona } from "@/lib/db";
+import EscudoPolicia from "@/components/EscudoPolicia";
 
 type Familia = { id: string; apellido: string };
 
@@ -47,6 +49,12 @@ export default function NuevaForm({
   const estaPendiente = personaInicial?.estado === "pendiente";
   const [familiaSeleccionada, setFamiliaSeleccionada] = useState(personaInicial?.familia_id || familias[0]?.id || "");
   const [color, setColor] = useState<string>(personaInicial?.color || "default");
+  const [decoracion, setDecoracion] = useState<string>(() =>
+    personaInicial?.id ? getDecoracionPersona(personaInicial.id) : "ninguna"
+  );
+  const policialInicial = personaInicial?.id ? getPerfilPolicial(personaInicial.id) : null;
+  const [esPolicia, setEsPolicia] = useState<boolean>(Boolean(policialInicial?.es_policia));
+  const [rangoPolicial, setRangoPolicial] = useState<string>(policialInicial?.rango || "");
   const [nombre, setNombre] = useState(personaInicial?.nombre || "");
   const [apodo, setApodo] = useState(personaInicial?.apodo || "");
   const [anios, setAnios] = useState(personaInicial?.anios || "");
@@ -903,6 +911,82 @@ export default function NuevaForm({
             Cuando un familiar o visitante abra la ficha de este ser querido, el santuario adoptará el color que elijas aquí:
           </p>
           <ColorPickerGrid value={color} onChange={setColor} name="color" showDesc={false} />
+
+          {/* Homenaje Institucional: Policía Nacional RD */}
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <input type="hidden" name="es_policia" value={esPolicia ? "1" : "0"} />
+            <label className="flex items-start gap-3 p-3 rounded-xl border border-[#d4af37]/35 bg-[#122238]/60 hover:bg-[#122238]/90 cursor-pointer transition-colors">
+              <input
+                type="checkbox"
+                checked={esPolicia}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setEsPolicia(checked);
+                  if (checked && !epitafio.trim()) {
+                    setEpitafio(
+                      "Cumplió su deber con honor, valentía y lealtad. Hoy descansa en la guardia eterna."
+                    );
+                  }
+                }}
+                className="mt-0.5 w-4 h-4 accent-[#d4af37] cursor-pointer"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <EscudoPolicia className="w-5 h-5 shrink-0" />
+                  <span className="text-xs font-medium text-[#f0d77a] uppercase tracking-wider">
+                    Homenaje Policía Nacional RD
+                  </span>
+                </div>
+                <p className="text-[11px] text-stone-300 mt-1 leading-relaxed">
+                  Activa la paleta institucional azul marino y dorado, escudo oficial, rango y botón para rendir honores.
+                </p>
+              </div>
+            </label>
+
+            {esPolicia && (
+              <div className="mt-3">
+                <label className={lab}>Rango y Unidad Institucional</label>
+                <input
+                  type="text"
+                  name="rango_policial"
+                  value={rangoPolicial}
+                  onChange={(e) => setRangoPolicial(e.target.value)}
+                  placeholder="Ej: Sargento Mayor • Guardia de Honor"
+                  className={inp}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-white/10">
+            <p className="text-[11px] uppercase tracking-[0.18em] text-gold-soft mb-1.5">
+              ✨ Decoración por vocación o pasión
+            </p>
+            <p className="text-[11px] text-stone-400 mb-3">
+              Añade emblemas conmemorativos en su retrato (ej. pelotero, policía/militar, músico...).
+            </p>
+            <input type="hidden" name="decoracion" value={decoracion} />
+            <div className="grid grid-cols-2 gap-1.5">
+              {DECORACIONES.map((d) => {
+                const activo = decoracion === d.id;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setDecoracion(d.id)}
+                    className={`flex items-center gap-2 px-2.5 py-2 rounded-xl border text-left text-[11px] transition-all cursor-pointer ${
+                      activo
+                        ? "border-gold/70 bg-gold/15 text-gold-soft shadow-[0_0_12px_rgba(201,168,106,0.2)]"
+                        : "border-white/10 bg-stone-950/60 text-stone-300 hover:border-white/25"
+                    }`}
+                  >
+                    <span className="text-sm shrink-0">{d.icon}</span>
+                    <span className="truncate">{d.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </Card>
 
         {estaPendiente ? (

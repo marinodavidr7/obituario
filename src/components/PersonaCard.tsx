@@ -1,9 +1,13 @@
 import Link from "@/components/Link";
-import type { Persona } from "@/lib/db";
+import { esPerfilPolicial, getDecoracionPersona, type Persona } from "@/lib/db";
+import { getDecoracionInfo } from "@/lib/decoraciones";
+import EscudoPolicia from "@/components/EscudoPolicia";
 import { iniciales } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 
 export default function PersonaCard({ p }: { p: Persona }) {
+  const dec = getDecoracionInfo(getDecoracionPersona(p.id));
+  const policial = esPerfilPolicial(p);
   return (
     <Link
       href={`/persona/${p.id}`}
@@ -26,6 +30,21 @@ export default function PersonaCard({ p }: { p: Persona }) {
             {iniciales(p.nombre)}
           </div>
         )}
+        {policial.es_policia ? (
+          <span
+            title="Policía Nacional RD"
+            className="absolute -bottom-1 -right-1 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#0a121f]/95 border border-[#d4af37]/80 backdrop-blur-md grid place-items-center shadow-lg"
+          >
+            <EscudoPolicia className="w-5 h-5" />
+          </span>
+        ) : dec.id !== "ninguna" ? (
+          <span
+            title={dec.label}
+            className="absolute -bottom-1 -right-1 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-stone-950 border border-gold/60 grid place-items-center text-sm shadow-lg"
+          >
+            {dec.icon}
+          </span>
+        ) : null}
       </div>
 
       <h3 className="relative z-10 font-serif text-base sm:text-xl text-stone-100 mt-3 sm:mt-5 leading-snug line-clamp-2 px-1">

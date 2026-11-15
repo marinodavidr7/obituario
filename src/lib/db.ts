@@ -1118,3 +1118,217 @@ export async function setVinculosPersona(
   }
   return { success: true };
 }
+
+function parseDecoracionesMap(raw: string | null | undefined): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getDecoracionPersona(personaId: string): string {
+  const mapa = parseDecoracionesMap(cachedConfig["decoraciones_almas"]);
+  return mapa[personaId] || "ninguna";
+}
+
+export async function setDecoracionPersona(
+  personaId: string,
+  decoracionId: string
+): Promise<{ success: boolean; error?: string }> {
+  let mapa = parseDecoracionesMap(cachedConfig["decoraciones_almas"]);
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data } = await supabase
+        .from("config")
+        .select("valor")
+        .eq("clave", "decoraciones_almas")
+        .maybeSingle();
+      if (data && typeof data.valor === "string") {
+        mapa = parseDecoracionesMap(data.valor);
+      }
+    } catch {
+      // fallback to local cache
+    }
+  }
+
+  if (!decoracionId || decoracionId === "ninguna") {
+    delete mapa[personaId];
+  } else {
+    mapa[personaId] = decoracionId;
+  }
+
+  const serialized = JSON.stringify(mapa);
+  cachedConfig["decoraciones_almas"] = serialized;
+  saveState();
+  window.dispatchEvent(new Event("panteon:db-updated"));
+
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from("config")
+        .upsert({ clave: "decoraciones_almas", valor: serialized });
+      if (error) return { success: false, error: error.message };
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Error al guardar decoración" };
+    }
+  }
+  return { success: true };
+}
+
+export type PerfilPolicialInfo = {
+  es_policia: boolean;
+  rango: string;
+  honores: number;
+};
+
+function parsePolicialMap(raw: string | null | undefined): Record<string, PerfilPolicialInfo> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function getPerfilPolicial(personaId: string): PerfilPolicialInfo {
+  const mapa = parsePolicialMap(cachedConfig["perfiles_policia"]);
+  const item = mapa[personaId];
+  return {
+    es_policia: Boolean(item?.es_policia),
+    rango: item?.rango || "",
+    honores: typeof item?.honores === "number" ? item.honores : 0,
+  };
+}
+
+export function esPerfilPolicial(p: Persona | null | undefined): PerfilPolicialInfo {
+  if (!p) return { es_policia: false, rango: "", honores: 0 };
+  const guardado = getPerfilPolicial(p.id);
+  const dec = getDecoracionPersona(p.id);
+
+  let rangoDetectado = guardado.rango;
+  let detectadoEnDatos = false;
+
+  if (Array.isArray(p.datos)) {
+    for (const item of p.datos) {
+      const k = String(Array.isArray(item) ? item[0] : (item as any)?.k || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+      const v = String(Array.isArray(item) ? item[1] : (item as any)?.v || "").trim();
+      const vNorm = v
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+      if (
+        /(profesion|oficio|ocupacion|cargo|rango|institucion|unidad|labor)/.test(k) &&
+        /(policia|guardia|coronel|sargento|teniente|capitan|mayor|general|cabo|raso|patrulla)/.test(vNorm)
+      ) {
+        detectadoEnDatos = true;
+        if (!rangoDetectado) rangoDetectado = v;
+      }
+    }
+  }
+
+  return {
+    es_policia: guardado.es_policia || dec === "militar" || detectadoEnDatos,
+    rango: rangoDetectado,
+    honores: guardado.honores,
+  };
+}
+
+export async function setPerfilPolicial(
+  personaId: string,
+  info: { es_policia: boolean; rango?: string }
+): Promise<{ success: boolean; error?: string }> {
+  let mapa = parsePolicialMap(cachedConfig["perfiles_policia"]);
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data } = await supabase
+        .from("config")
+        .select("valor")
+        .eq("clave", "perfiles_policia")
+        .maybeSingle();
+      if (data && typeof data.valor === "string") {
+        mapa = parsePolicialMap(data.valor);
+      }
+    } catch {
+      // fallback to local cache
+    }
+  }
+
+  const prev = mapa[personaId];
+  if (!info.es_policia) {
+    delete mapa[personaId];
+  } else {
+    mapa[personaId] = {
+      es_policia: true,
+      rango: (info.rango || "").trim(),
+      honores: typeof prev?.honores === "number" ? prev.honores : 0,
+    };
+  }
+
+  const serialized = JSON.stringify(mapa);
+  cachedConfig["perfiles_policia"] = serialized;
+  saveState();
+  window.dispatchEvent(new Event("panteon:db-updated"));
+
+  if (isSupabaseConfigured) {
+    try {
+      const { error } = await supabase
+        .from("config")
+        .upsert({ clave: "perfiles_policia", valor: serialized });
+      if (error) return { success: false, error: error.message };
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Error al guardar perfil policial" };
+    }
+  }
+  return { success: true };
+}
+
+export async function incrementarHonoresPolicial(personaId: string): Promise<number> {
+  let mapa = parsePolicialMap(cachedConfig["perfiles_policia"]);
+
+  if (isSupabaseConfigured) {
+    try {
+      const { data } = await supabase
+        .from("config")
+        .select("valor")
+        .eq("clave", "perfiles_policia")
+        .maybeSingle();
+      if (data && typeof data.valor === "string") {
+        mapa = parsePolicialMap(data.valor);
+      }
+    } catch {
+      // fallback to local cache
+    }
+  }
+
+  const prev = mapa[personaId] || { es_policia: true, rango: "", honores: 0 };
+  const nuevoTotal = (typeof prev.honores === "number" ? prev.honores : 0) + 1;
+  mapa[personaId] = {
+    ...prev,
+    es_policia: true,
+    honores: nuevoTotal,
+  };
+
+  const serialized = JSON.stringify(mapa);
+  cachedConfig["perfiles_policia"] = serialized;
+  saveState();
+  window.dispatchEvent(new Event("panteon:db-updated"));
+
+  if (isSupabaseConfigured) {
+    try {
+      await supabase.from("config").upsert({ clave: "perfiles_policia", valor: serialized });
+    } catch {
+      // keep optimistic value in cache
+    }
+  }
+  return nuevoTotal;
+}

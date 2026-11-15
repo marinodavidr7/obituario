@@ -49,6 +49,32 @@
   --theme-border: rgba(201, 168, 106, 0.24);
 }
 
+/* 9. TEMA INSTITUCIONAL: Policía Nacional RD (Azul Marino Institucional y Dorado Medalla) */
+[data-theme="policia-nacional"] {
+  --bg-top: #122238;
+  --bg-mid: #0a121f;
+  --bg-bot: #050910;
+  --accent: #d4af37;
+  --accent-soft: rgba(212, 175, 55, 0.16);
+  --accent-border: rgba(212, 175, 55, 0.45);
+  --particle-color: rgba(212, 175, 55, 0.32);
+
+  --theme-gold: #d4af37;
+  --theme-gold-soft: #f0d77a;
+  --theme-gold-dark: #9c7c19;
+  --theme-stone-950: #050910;
+  --theme-stone-900: #0a121f;
+  --theme-stone-850: #0f1b2e;
+  --theme-stone-800: #122238;
+  --theme-bg: radial-gradient(1300px 750px at 50% -10%, var(--bg-top) 0%, var(--bg-mid) 48%, var(--bg-bot) 100%);
+  --theme-text: #eef2f7;
+  --theme-border: var(--accent-border);
+}
+
+[data-theme="policia-nacional"] .stars b {
+  background: radial-gradient(circle, var(--particle-color) 0%, rgba(212, 175, 55, 0) 70%);
+}
+
 /* 2. TEMA AZUL CIELO: Celeste Cósmico y Sereno */
 [data-theme="azul-cielo"] {
   --theme-gold: #38bdf8;

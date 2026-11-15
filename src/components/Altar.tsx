@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { crearVelaRealistaSVG } from "@/lib/svg";
 import { triggerHaptic } from "@/lib/haptics";
-import { addOfrenda } from "@/lib/db";
+import { addOfrenda, incrementarHonoresPolicial } from "@/lib/db";
 import { FLORES_OPCIONES, FlorOpcion, getFlorImg, getFlorNombre } from "@/lib/flores";
 
 const LLAMA = `<svg class="llama" viewBox="0 0 24 32" aria-hidden="true"><path d="M12 1c2.6 5.7 8 8.7 8 15.6C20 25 16.4 29 12 29S4 25 4 16.6C4 8.7 9.4 6.7 12 1z" fill="#ff8a1f"/><path d="M12 10c1.2 2.8 3.8 4.3 3.8 7.6 0 3-1.7 5.2-3.8 5.2s-3.8-2.2-3.8-5.2C8.2 14.3 10.8 12.8 12 10z" fill="#ffe08a"/></svg>`;
@@ -22,6 +22,8 @@ interface AltarProps {
   visitas: number;
   floresTipos?: string[];
   nombre?: string;
+  esPolicia?: boolean;
+  honores?: number;
 }
 
 export default function Altar({
@@ -31,9 +33,12 @@ export default function Altar({
   visitas,
   floresTipos: ft0 = [],
   nombre,
+  esPolicia = false,
+  honores: h0 = 0,
 }: AltarProps) {
   const [velas, setVelas] = useState(v0);
   const [flores, setFlores] = useState(f0);
+  const [honores, setHonores] = useState(h0);
   const [floresTipos, setFloresTipos] = useState<string[]>(Array.isArray(ft0) ? ft0 : []);
   const [msg, setMsg] = useState("");
   const [glow, setGlow] = useState(false);
@@ -49,6 +54,10 @@ export default function Altar({
   useEffect(() => {
     setFlores(f0);
   }, [f0]);
+
+  useEffect(() => {
+    setHonores(h0);
+  }, [h0]);
 
   useEffect(() => {
     if (Array.isArray(ft0)) {
@@ -283,6 +292,27 @@ export default function Altar({
           >
             <span>🌹</span> <span>Dejar Flores</span>
           </button>
+          {esPolicia && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (busy) return;
+                setBusy(true);
+                triggerHaptic("success");
+                setHonores((h) => h + 1);
+                setGlow(true);
+                setMsg("Has rendido honores a su servicio y legado 🎖️");
+                const nuevo = await incrementarHonoresPolicial(personaId);
+                setHonores(nuevo);
+                setTimeout(() => setGlow(false), 1200);
+                setTimeout(() => setMsg(""), 4000);
+                setBusy(false);
+              }}
+              className="col-span-2 sm:col-span-1 tribute-btn min-h-[46px] inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2.5 rounded-full bg-[#122238]/90 hover:bg-[#1a3150] active:scale-95 border border-[#d4af37]/70 text-[#f0d77a] text-[11px] sm:text-xs uppercase tracking-[0.14em] sm:tracking-[0.18em] shadow-[0_0_20px_rgba(212,175,55,0.22)] cursor-pointer"
+            >
+              <span>🎖️</span> <span>Rendir Honores</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -362,6 +392,12 @@ export default function Altar({
             🌹 <b className="text-rose-200 font-medium">{flores}</b>{" "}
             {flores === 1 ? "ofrenda floral" : "ofrendas florales"}
           </span>
+          {esPolicia && (
+            <span>
+              🎖️ <b className="text-[#f0d77a] font-medium">{honores}</b>{" "}
+              {honores === 1 ? "honor rendido" : "honores rendidos"}
+            </span>
+          )}
           <span className="text-stone-400">
             👁️ <b className="text-stone-200 font-normal">{visitas}</b> visitas
           </span>
