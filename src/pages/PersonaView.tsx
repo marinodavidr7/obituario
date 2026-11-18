@@ -581,7 +581,7 @@ export default function PersonaView({ id }: { id: string }) {
           {Array.isArray(p.datos) && p.datos.length > 0 && (
             <section className="mt-6 sm:mt-8">
               <Titulo>Semblanza y Raíces</Titulo>
-              <dl className="divide-y divide-white/[0.06] border border-gold/15 rounded-2xl overflow-hidden bg-[#0b0e12]/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+              <dl style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }} className="divide-y divide-white/[0.06] border border-gold/15 rounded-2xl overflow-hidden bg-[#0b0e12]/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 {p.datos.map((item, idx) => {
                   const k = Array.isArray(item) ? item[0] : (item as any)?.k;
                   const v = Array.isArray(item) ? item[1] : (item as any)?.v;
