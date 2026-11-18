@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "@/components/Link";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+
 import { iniciales } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { listFamilias, listPersonas } from "@/lib/db";
@@ -250,7 +252,7 @@ export default function Buscador() {
                       {p.foto ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={p.foto}
+                          src={normalizarUrlImagen(p.foto)}
                           alt=""
                           style={{ objectPosition: p.foto_pos || "50% 20%" }}
                           className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0"
@@ -404,7 +406,7 @@ export default function Buscador() {
                       {p.foto ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={p.foto}
+                          src={normalizarUrlImagen(p.foto)}
                           alt=""
                           style={{ objectPosition: p.foto_pos || "50% 20%" }}
                           className="w-full h-full object-cover grayscale-[20%]"

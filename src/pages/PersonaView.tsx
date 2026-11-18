@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/Link";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+
 import Altar from "@/components/Altar";
 import CompartirHomenaje from "@/components/CompartirHomenaje";
 import Dedicatorias from "@/components/Dedicatorias";
@@ -11,7 +13,7 @@ import PersonaAudioWatcher from "@/components/PersonaAudioWatcher";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import { applySoulTheme, clearSoulTheme, getGeneralSanctuaryTheme } from "@/lib/theme";
-import { addVisita, deletePersona, esPerfilPolicial, getDecoracionPersona, getFamilia, getPersona, getVinculosPersona, listDedicatorias, listPersonas } from "@/lib/db";
+import { addVisita, deletePersona, esPerfilPolicial, getDecoracionPersona, getFamilia, getPersona, getVinculosPersona, listDedicatorias, listPersonas, personasSelectColumns } from "@/lib/db";
 import { getDecoracionInfo } from "@/lib/decoraciones";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useAdmin } from "@/lib/auth";
@@ -129,7 +131,8 @@ export default function PersonaView({ id }: { id: string }) {
 
       if (!p && isSupabaseConfigured) {
         try {
-          const { data } = await supabase.from("personas").select("*").eq("id", id).maybeSingle();
+          const cols = await personasSelectColumns();
+          const { data } = await supabase.from("personas").select(cols).eq("id", id).maybeSingle();
           if (data && !isCancelled) {
             p = data as any;
           }
@@ -361,7 +364,7 @@ export default function PersonaView({ id }: { id: string }) {
                 >
                   {p.foto ? (
                     <img
-                      src={p.foto}
+                      src={normalizarUrlImagen(p.foto)}
                       alt={`Retrato de ${p.nombre}`}
                       style={{ objectPosition: p.foto_pos || "50% 20%" }}
                       loading="eager"
@@ -566,7 +569,7 @@ export default function PersonaView({ id }: { id: string }) {
               </div>
             )}
             {p.bio && (
-              <p className="text-xs sm:text-sm font-light leading-relaxed text-stone-300 mt-3 sm:mt-4 text-left px-1">
+              <p className="text-xs sm:text-sm font-light leading-relaxed text-stone-300 mt-3 sm:mt-4 text-left px-1 whitespace-pre-line break-words">
                 {p.bio}
               </p>
             )}
@@ -619,7 +622,7 @@ export default function PersonaView({ id }: { id: string }) {
                       <div className="w-10 h-10 rounded-full overflow-hidden border border-gold/30 bg-stone-950 shrink-0 grid place-items-center text-xs font-serif text-gold">
                         {v.persona.foto ? (
                           <img
-                            src={v.persona.foto}
+                            src={normalizarUrlImagen(v.persona.foto)}
                             alt={v.persona.nombre}
                             style={{ objectPosition: v.persona.foto_pos || "50% 20%" }}
                             className="w-full h-full object-cover"

@@ -1,8 +1,12 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 import { triggerHaptic } from "@/lib/haptics";
+import { normalizarGaleria } from "@/lib/galeria";
+import type { GaleriaItem } from "@/types";
 
-export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: string }) {
+export default function Gallery({ fotos: fotosProp, nombre }: { fotos: GaleriaItem[]; nombre: string }) {
+  // Normalizar en render: mezcla entradas legacy ("https://...") con las nuevas {url, comentario}.
+  const fotos = normalizarGaleria(fotosProp);
   const [open, setOpen] = useState<number | null>(null);
   const [loadedMap, setLoadedMap] = useState<Record<string, boolean>>({});
   const markLoaded = useCallback((src: string) => {
@@ -36,7 +40,9 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
   return (
     <>
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
-        {fotos.map((src, i) => {
+        {fotos.map((item, i) => {
+          const src = item.url;
+          const comentario = item.comentario;
           const isGif = /\.gif(\?|$)/i.test(src) || src.toLowerCase().includes(".gif");
           const isVideoClip = /\.(mp4|webm|mov)(\?|$)/i.test(src);
           const isLoaded = Boolean(loadedMap[src]);
@@ -97,6 +103,11 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
                   CLIP
                 </span>
               )}
+              {comentario && (
+                <span className="absolute bottom-0 inset-x-0 px-1.5 py-1 bg-gradient-to-t from-black/85 via-black/55 to-transparent text-[9px] leading-tight text-stone-100 line-clamp-2 text-left pointer-events-none z-20">
+                  {comentario}
+                </span>
+              )}
             </button>
           );
         })}
@@ -132,9 +143,9 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
             ‹
           </button>
 
-          {/\.(mp4|webm|mov)(\?|$)/i.test(fotos[open]) ? (
+          {/\.(mp4|webm|mov)(\?|$)/i.test(fotos[open].url) ? (
             <video
-              src={fotos[open]}
+              src={fotos[open].url}
               autoPlay
               loop
               muted
@@ -145,7 +156,7 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
             />
           ) : (
             <div className="relative flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-              {!loadedMap[fotos[open]] && (
+              {!loadedMap[fotos[open].url] && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                   <span className="w-7 h-7 rounded-full border-2 border-gold/30 border-t-gold animate-spin mb-2" />
                   <span className="text-xs text-gold-soft tracking-wider">Cargando...</span>
@@ -153,9 +164,9 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
               )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={fotos[open]}
-                alt=""
-                onLoad={() => markLoaded(fotos[open])}
+                src={fotos[open].url}
+                alt={fotos[open].comentario ?? `Fotografía de ${nombre}`}
+                onLoad={() => markLoaded(fotos[open].url)}
                 className="max-w-[94vw] max-h-[78vh] sm:max-h-[82vh] rounded-xl shadow-2xl object-contain border border-white/15"
               />
             </div>
@@ -173,8 +184,15 @@ export default function Gallery({ fotos, nombre }: { fotos: string[]; nombre: st
             ›
           </button>
 
-          <div className="absolute bottom-[max(1.2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 text-[11px] tracking-[0.25em] text-stone-400 bg-stone-900/80 px-4 py-1.5 rounded-full border border-white/10">
-            {open + 1} / {fotos.length}
+          <div className="absolute bottom-[max(1.2rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-full max-w-[94vw] sm:max-w-xl flex flex-col items-center gap-2 px-3">
+            {fotos[open].comentario && (
+              <div className="w-full text-center text-sm text-stone-100 bg-black/70 border border-white/10 rounded-xl px-4 py-2 backdrop-blur-sm">
+                {fotos[open].comentario}
+              </div>
+            )}
+            <div className="text-[11px] tracking-[0.25em] text-stone-400 bg-stone-900/80 px-4 py-1.5 rounded-full border border-white/10">
+              {open + 1} / {fotos.length}
+            </div>
           </div>
         </div>
       )}

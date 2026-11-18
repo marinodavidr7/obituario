@@ -85,8 +85,9 @@ export default function Dedicatorias({
 
     setEnviando(true);
     try {
-      const iaRes = await corregirOrtografiaIA(check.textoLimpio);
-      const textoFinal = iaRes.ok && iaRes.textoCorregido ? iaRes.textoCorregido : check.textoLimpio;
+      // Sin corrección automática: cada envío no debe gastar cuota LLM pagada.
+      // La revisión manual (botón) sigue disponible para quien quiera usarla.
+      const textoFinal = check.textoLimpio;
       const nueva = addDedicatoria(personaId, check.autorLimpio, textoFinal);
       triggerHaptic("success");
       setLista((l) => [nueva, ...l]);

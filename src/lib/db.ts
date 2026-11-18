@@ -22,6 +22,8 @@ import {
   broadcastPersonaEliminada,
   broadcastFamiliaActualizada,
 } from "./realtime";
+import { eliminarArchivosSubidos, recolectarUrlsDePersona } from "./storageCleanup";
+import { galeriaUrls, normalizarGaleria } from "@/lib/galeria";
 
 export type {
   Dato,
@@ -121,13 +123,31 @@ export function setStoredSoulColor(personaId: string, color: string | null | und
   }
 }
 
+// Columnas de personas seguras para el rol anon (sin PII de contacto).
+// Con sesión autenticada (guardián) se usa "*" para incluir solicitante/contacto pendientes.
+export const PERSONAS_PUBLIC_COLS =
+  "id,familia_id,nombre,apodo,anios,fechas,epitafio,foto,foto_pos,bio,datos,galeria,videos,visitas,velas,flores,orden,estado,fecha_solicitud,musica,musica_titulo,musicas_rotacion,musicas_inicio,color,created_at";
+
+export async function personasSelectColumns(): Promise<string> {
+  if (!isSupabaseConfigured) return "*";
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session ? "*" : PERSONAS_PUBLIC_COLS;
+  } catch {
+    return PERSONAS_PUBLIC_COLS;
+  }
+}
+
 export async function syncFromSupabase(): Promise<void> {
   if (!isSupabaseConfigured) return;
 
   try {
+    const cols = await personasSelectColumns();
     const [famRes, perRes, dedRes, cfgRes] = await Promise.all([
       supabase.from("familias").select("*").order("orden"),
-      supabase.from("personas").select("*").order("orden"),
+      supabase.from("personas").select(cols).order("orden"),
       supabase.from("dedicatorias").select("*").order("fecha", { ascending: false }),
       supabase.from("config").select("*"),
     ]);
@@ -457,10 +477,9 @@ export function addVisita(personaId: string): void {
     p.visitas = (p.visitas || 0) + 1;
     saveState();
     if (isSupabaseConfigured) {
-      supabase.rpc("increment_visita", { persona_id: personaId }).then(async ({ error }) => {
-        if (error) {
-          await supabase.from("personas").update({ visitas: p.visitas }).eq("id", personaId);
-        }
+      // Incremento atómico server-side vía RPC (+1); anon ya no puede UPDATE directo.
+      supabase.rpc("increment_visita", { persona_id: personaId }).then(({ error }) => {
+        if (error) console.error("[panteon/db] Error en RPC increment_visita:", error);
       });
     }
   }
@@ -485,17 +504,11 @@ export function addOfrenda(
 
   // Enviar a Supabase y emitir broadcast Realtime a todos los usuarios
   if (isSupabaseConfigured) {
-    // 1. Persistir conteo de velas y flores en la tabla personas (columnas oficiales)
+    // 1. Persistir conteo de velas y flores vía RPC atómico (+1); anon no puede UPDATE directo.
     supabase
-      .from("personas")
-      .update({ velas: p.velas, flores: p.flores })
-      .eq("id", personaId)
+      .rpc("registrar_ofrenda", { persona_id: personaId, tipo, flor_tipo: florTipo ?? "lujo" })
       .then(({ error }) => {
-        if (error) {
-          console.error("[panteon/db] Error al persistir ofrenda en Supabase:", error);
-        } else {
-          console.log("[panteon/db] Ofrenda guardada con éxito en Supabase:", { id: personaId, velas: p.velas, flores: p.flores });
-        }
+        if (error) console.error("[panteon/db] Error en RPC registrar_ofrenda:", error);
       });
 
     // 2. Si se depositó una flor, persistir la lista de arreglos elegidos en config para compartirla
@@ -704,6 +717,10 @@ export async function insertPersona(p: Omit<Persona, "visitas" | "velas" | "flor
 
   if (isSupabaseConfigured) {
     const payload = toSupabasePersona(nueva);
+    // anon no tiene privilegio sobre los contadores: la BD los inicializa a 0.
+    delete payload.visitas;
+    delete payload.velas;
+    delete payload.flores;
     try {
       const { error } = await supabase.from("personas").insert([payload]);
       if (error) {
@@ -774,9 +791,51 @@ export async function updatePersona(p: Omit<Persona, "visitas" | "velas" | "flor
   return { success: true };
 }
 
+// ─── Limpieza de archivos en Supabase Storage ───────────────────────────────
+// Extrae las URLs de archivos de `foto`, `galeria`, `musica` y rotación musical de
+// una persona y las borra del bucket `panteon-media`. Además borra las fotos
+// pendientes de aprobación de esa persona (también del bucket) y limpia la config.
+// Best-effort: los errores no tiran el delete del perfil.
+async function limpiarArchivosPersona(persona?: Pick<Persona, "id" | "foto" | "galeria" | "musica" | "musicas_rotacion"> | null): Promise<void> {
+  if (!persona) return;
+  const urls = recolectarUrlsDePersona(persona as any);
+
+  // Fotos pendientes de aprobación asociadas a esta persona: borrar archivos y limpiar config
+  try {
+    const raw = cachedConfig["fotos_pendientes"];
+    if (typeof raw === "string" && raw) {
+      const pendientes = parseFotosPendientes(raw);
+      const urlsPersona = pendientes.filter((f) => f.persona_id === persona.id).map((f) => f.url);
+      if (urlsPersona.length > 0) {
+        urls.push(...urlsPersona);
+        const restantes = pendientes.filter((f) => f.persona_id !== persona.id);
+        cachedConfig["fotos_pendientes"] = JSON.stringify(restantes);
+        saveState();
+        if (isSupabaseConfigured) {
+          try {
+            await supabase.from("config").upsert({ clave: "fotos_pendientes", valor: cachedConfig["fotos_pendientes"] });
+          } catch (e) {
+            console.warn("[storageCleanup] No se pudo limpiar fotos_pendientes en Supabase:", e);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("[storageCleanup] Error limpiando fotos pendientes de la persona:", e);
+  }
+
+  const urlsLimpias = urls.filter((u): u is string => Boolean(u && typeof u === "string" && u.length > 5));
+  if (urlsLimpias.length === 0) return;
+  const resultado = await eliminarArchivosSubidos(urlsLimpias);
+  if (resultado.errores.length > 0) {
+    console.warn("[storageCleanup] Algunos archivos no pudieron borrarse:", resultado.errores);
+  }
+}
+
 export async function deletePersona(id: string): Promise<{ success: boolean; error?: string }> {
   setStoredSoulColor(id, null);
   const personaAEliminar = cachedPersonas.find((x) => x.id === id);
+  await limpiarArchivosPersona(personaAEliminar || null);
   cachedPersonas = cachedPersonas.filter((x) => x.id !== id);
   cachedDedicatorias = cachedDedicatorias.filter((d) => d.persona_id !== id);
 
@@ -817,8 +876,18 @@ export async function deletePersona(id: string): Promise<{ success: boolean; err
 }
 
 export async function deleteFamilia(id: string): Promise<{ success: boolean; error?: string }> {
+  // Limpiar archivos de todas las personas de la familia antes de borrar filas
+  const personasFamilia = cachedPersonas.filter((p) => p.familia_id === id);
+  for (const persona of personasFamilia) {
+    // No bloquear por errores de storage: best-effort
+    try {
+      await limpiarArchivosPersona(persona);
+    } catch (e) {
+      console.warn("[storageCleanup] Error limpiando archivos de", persona?.id, e);
+    }
+  }
   cachedFamilias = cachedFamilias.filter((f) => f.id !== id);
-  const personasIds = cachedPersonas.filter((p) => p.familia_id === id).map((p) => p.id);
+  const personasIds = personasFamilia.map((p) => p.id);
   cachedPersonas = cachedPersonas.filter((p) => p.familia_id !== id);
   cachedDedicatorias = cachedDedicatorias.filter((d) => !personasIds.includes(d.persona_id));
   saveState();
@@ -953,7 +1022,8 @@ export async function addFotoPendiente(
   personaId: string,
   personaNombre: string,
   url: string,
-  remitente = "Familiar"
+  remitente = "Familiar",
+  comentario?: string | null
 ): Promise<FotoPendiente> {
   const actuales = await fetchLatestFotosPendientes();
   const nueva: FotoPendiente = {
@@ -962,6 +1032,7 @@ export async function addFotoPendiente(
     persona_nombre: personaNombre,
     url,
     remitente: remitente.trim() || "Familiar",
+    comentario: comentario?.trim() ? comentario.trim() : null,
     fecha: new Date().toISOString(),
   };
   const actualizadas = [nueva, ...actuales];
@@ -989,15 +1060,15 @@ export async function aprobarFotoPendiente(
   const serialized = JSON.stringify(restantes);
   cachedConfig["fotos_pendientes"] = serialized;
 
+  const item = { url: foto.url, comentario: foto.comentario || null };
   const pIdx = cachedPersonas.findIndex((p) => p.id === foto.persona_id);
   if (pIdx >= 0) {
-    const galeriaActual = Array.isArray(cachedPersonas[pIdx].galeria)
-      ? cachedPersonas[pIdx].galeria
-      : [];
-    if (!galeriaActual.includes(foto.url)) {
+    const galeriaMixta = Array.isArray(cachedPersonas[pIdx].galeria) ? cachedPersonas[pIdx].galeria : [];
+    const galeriaUrlsArr = galeriaUrls(galeriaMixta);
+    if (!galeriaUrlsArr.includes(foto.url)) {
       cachedPersonas[pIdx] = {
         ...cachedPersonas[pIdx],
-        galeria: [...galeriaActual, foto.url],
+        galeria: [...galeriaMixta, item],
       };
     }
     broadcastPersonaActualizada(cachedPersonas[pIdx]);
@@ -1013,9 +1084,9 @@ export async function aprobarFotoPendiente(
         .eq("id", foto.persona_id)
         .maybeSingle();
 
-      const galeriaDb: string[] = Array.isArray(pRow?.galeria) ? pRow.galeria : [];
-      if (!galeriaDb.includes(foto.url)) {
-        const nuevaGaleria = [...galeriaDb, foto.url];
+      const galeriaDb = normalizarGaleria(pRow?.galeria);
+      if (!galeriaDb.some((g) => g.url === foto.url)) {
+        const nuevaGaleria = [...galeriaDb, { url: foto.url, comentario: foto.comentario || null }];
         const { error: errPersona } = await supabase
           .from("personas")
           .update({ galeria: nuevaGaleria })
@@ -1038,6 +1109,17 @@ export async function rechazarFotoPendiente(
   fotoId: string
 ): Promise<{ success: boolean; error?: string }> {
   const actuales = await fetchLatestFotosPendientes();
+  const foto = actuales.find((f) => f.id === fotoId);
+  if (foto?.url) {
+    try {
+      const res = await eliminarArchivosSubidos([foto.url]);
+      if (res.errores.length > 0) {
+        console.warn("[storageCleanup] No se pudo borrar el archivo de la foto rechazada:", res.errores);
+      }
+    } catch (e) {
+      console.warn("[storageCleanup] Error al borrar la foto rechazada:", e);
+    }
+  }
   const restantes = actuales.filter((f) => f.id !== fotoId);
   const serialized = JSON.stringify(restantes);
   cachedConfig["fotos_pendientes"] = serialized;

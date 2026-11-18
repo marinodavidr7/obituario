@@ -1,18 +1,37 @@
 import { createClient } from "@supabase/supabase-js";
 
-const DEFAULT_SUPABASE_URL = "https://ljgdjiqbftrrwsclgics.supabase.co";
-const DEFAULT_SUPABASE_KEY = "sb_publishable_yysjerLCXEg7srHkljKwbw_ee_NQXlQ";
-const DEFAULT_BOT_TOKEN = "8560777329:AAEeeqROpsTRYid6HCFQAC8H1zY7AObmu5E";
-const DEFAULT_OPENROUTER_KEY = "";
+// NUNCA pongas secretos en el fuente. Configura estas variables en Vercel:
+//   SUPABASE_URL (o VITE_SUPABASE_URL)
+//   SUPABASE_SERVICE_ROLE_KEY  (servidor; requerida para aprobar/rechazar/leer pendientes)
+//   TELEGRAM_BOT_TOKEN         (BotFather; requerida para enviar mensajes del bot)
+//   TELEGRAM_WEBHOOK_SECRET    (opcional pero recomendado; x-telegram-bot-api-secret-token)
+//   TELEGRAM_ADMIN_CHAT_IDS    (ids de Telegram autorizados, separados por coma)
+//   OPENROUTER_API_KEY         (opcional; IA del bot y corrector de ortografía)
+const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+const SURROGATE_ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || "";
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || process.env.VITE_TELEGRAM_BOT_TOKEN || "";
+const TELEGRAM_WEBHOOK_SECRET = process.env.TELEGRAM_WEBHOOK_SECRET || "";
+const ADMIN_CHAT_IDS = (process.env.TELEGRAM_ADMIN_CHAT_IDS || "")
+  .split(",")
+  .map((x) => x.trim())
+  .filter(Boolean);
 
 let supabaseClient: any = null;
 function getSupabase() {
   if (!supabaseClient) {
-    const url = process.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-    const key = process.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_KEY;
+    const key = SUPABASE_SERVICE_ROLE_KEY || SURROGATE_ANON_KEY;
+    const url = SUPABASE_URL;
+    if (!url || !key) return null;
     supabaseClient = createClient(url, key);
   }
   return supabaseClient;
+}
+// ¿El servidor puede operar sobre el santuario con privilegios (post-RLS)?
+// El rol anon ya no puede leer pendientes ni mutar; sin service role el bot
+// no puede aprobar/rechazar/fotos ni listar solicitudes.
+function serviceReady() {
+  return Boolean(SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY);
 }
 
 interface BotConfig {
@@ -30,11 +49,14 @@ async function getBotConfig(supabase: any): Promise<BotConfig> {
     return cachedBotConfig.data;
   }
 
-  let token = process.env.VITE_TELEGRAM_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN || DEFAULT_BOT_TOKEN;
+  const token = process.env.VITE_TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN;
   let chatId = process.env.VITE_TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID || "";
-  let siteUrl = "https://obituariocloud.vercel.app";
-  let openrouterKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || DEFAULT_OPENROUTER_KEY;
+  let siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://obituariocloud.vercel.app";
+  let openrouterKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
 
+  if (!supabase) {
+    return { token, chatId, siteUrl, openrouterKey };
+  }
   try {
     const { data } = await supabase.from("config").select("clave, valor");
     if (data) {
@@ -152,22 +174,69 @@ Instrucciones:
   }
 }
 
+// Cuota por instancia de lambda (best-effort; no sustituye un límite de Vercel/KV)
+const quotaVentana: Map<string, number[]> = new Map();
+const QUOTA_MAX_PER_MIN = 30;
+function corregidorQuotaOk(ip: string): boolean {
+  const ahora = Date.now();
+  const lista = (quotaVentana.get(ip) || []).filter((t) => ahora - t < 60_000);
+  if (lista.length >= QUOTA_MAX_PER_MIN) {
+    quotaVentana.set(ip, lista);
+    return false;
+  }
+  lista.push(ahora);
+  quotaVentana.set(ip, lista);
+  return true;
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
-    return res.status(200).json({ ok: true, message: "Bot de Telegram para Obituario Familiar activo con IA." });
+    return res.status(200).json({ ok: true, message: "Bot de Telegram para Obituario Familiar activo." });
+  }
+
+  // Origen de la petición: si TELEGRAM_WEBHOOK_SECRET está configurado,
+  // Telegram debe presentarlo; si no está configurado, sólo se permiten
+  // peticiones desde ids autorizados (fallar cerrado en ambos casos).
+  if (TELEGRAM_WEBHOOK_SECRET) {
+    const incoming = req.headers?.["x-telegram-bot-api-secret-token"];
+    if (incoming !== TELEGRAM_WEBHOOK_SECRET) {
+      return res.status(401).json({ ok: false });
+    }
   }
 
   const supabase = getSupabase();
-  const { token, siteUrl, openrouterKey } = await getBotConfig(supabase);
 
   const update = req.body || {};
 
-  // 0. Endpoint de Corrección Ortográfica con IA para Dedicatorias
+  const esperadoChatId = () => String(
+    update?.callback_query?.message?.chat?.id ??
+    update?.message?.chat?.id ??
+    ""
+  );
+  // Operaciones de gestión (aprobar/rechazar/comandos): sólo guardianes autorizados.
+  // Si no hay allowlist configurada, se rechazan en silencio (añadir ids en
+  // TELEGRAM_ADMIN_CHAT_IDS para habilitar el bot de administración).
+  const isAdminChat = () => {
+    const chat = esperadoChatId();
+    return ADMIN_CHAT_IDS.length > 0 && chat.length > 0 && ADMIN_CHAT_IDS.includes(chat);
+  };
+  // Privilegios de datos: sin service role el bot no puede operar (lo exige RLS).
+  const canOperate = serviceReady() && supabase;
+
+  // 0. Endpoint público de corrección ortográfica (única vía abierta, con cuota y tope)
   if (update.action === "corregir_ortografia") {
+    const ip = String(req.headers?.["x-forwarded-for"] || req.socket?.remoteAddress || "anon").split(",")[0].trim();
+    if (!corregidorQuotaOk(ip)) {
+      return res.status(429).json({ ok: false, error: "Demasiadas peticiones" });
+    }
     const textoOriginal = String(update.texto || "").trim();
+    if (textoOriginal.length > 400) {
+      return res.status(400).json({ ok: false, error: "Texto demasiado largo" });
+    }
     if (!textoOriginal) {
       return res.status(400).json({ ok: false, error: "Texto vacío" });
     }
+    const openrouterKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
     if (!openrouterKey) {
       return res.status(200).json({ ok: false, textoCorregido: textoOriginal, error: "IA no configurada" });
     }
@@ -201,6 +270,19 @@ export default async function handler(req: any, res: any) {
     } catch {
       return res.status(200).json({ ok: false, textoCorregido: textoOriginal });
     }
+  }
+
+  // El bot completo es para guardianes autorizados: fallar cerrado.
+  if (!canOperate) {
+    return res.status(200).json({ ok: false, error: "Bot no configurado (falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)" });
+  }
+  if (!isAdminChat()) {
+    return res.status(200).json({ ok: true });
+  }
+
+  const { token, siteUrl, openrouterKey } = await getBotConfig(supabase!);
+  if (!token) {
+    return res.status(200).json({ ok: false, error: "Bot no configurado (falta TELEGRAM_BOT_TOKEN)" });
   }
 
   // 1. Manejo Ultrarrápido de Botones Interactivos (Callback Queries)
@@ -302,11 +384,14 @@ export default async function handler(req: any, res: any) {
             .eq("id", personaId)
             .maybeSingle();
 
-          const galeriaActual: string[] = Array.isArray(pRow?.galeria) ? pRow.galeria : [];
-          if (!galeriaActual.includes(foto.url)) {
+          const galeriaActual: Array<string | { url: string; comentario?: string | null }> =
+            Array.isArray(pRow?.galeria) ? pRow.galeria : [];
+          const yaExiste = galeriaActual.some((g) => (typeof g === "string" ? g : g?.url) === foto.url);
+          if (!yaExiste) {
+            const item = { url: foto.url, comentario: foto.comentario || null };
             await supabase
               .from("personas")
-              .update({ galeria: [...galeriaActual, foto.url] })
+              .update({ galeria: [...galeriaActual, item] })
               .eq("id", personaId);
           }
 

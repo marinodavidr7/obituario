@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "@/components/Link";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+
 import ConfirmModal from "@/components/ConfirmModal";
 import EditarFamiliaModal from "@/components/EditarFamiliaModal";
 import ColorPickerGrid from "@/components/ColorPickerGrid";
@@ -32,6 +34,8 @@ import {
   registrarWebhookTelegram,
 } from "@/lib/telegram";
 import { guardarArchivo } from "@/lib/uploads";
+import { isSupabaseConfigured } from "@/lib/supabase";
+import { auditarImagenesHuerfanas, borrarImagenesHuerfanas, type ArchivoHuerfano } from "@/lib/storageCleanup";
 import { iniciales, formatearFecha } from "@/lib/utils";
 import type { Dedicatoria, Familia, FotoPendiente, Persona, SanctuaryStats } from "@/types";
 
@@ -81,6 +85,10 @@ export default function Admin() {
   const [telegramBotInfo, setTelegramBotInfo] = useState<{ username?: string; firstName?: string } | null>(null);
   const [probandoTelegram, setProbandoTelegram] = useState(false);
   const [guardandoTelegram, setGuardandoTelegram] = useState(false);
+  const [analizandoImagenes, setAnalizandoImagenes] = useState(false);
+  const [auditoriaImagenes, setAuditoriaImagenes] = useState<{ huerfanas: ArchivoHuerfano[]; referenciadas: number } | null>(null);
+  const [borrandoHuerfana, setBorrandoHuerfana] = useState<string | null>(null);
+  const [borrandoTodas, setBorrandoTodas] = useState(false);
 
   const refreshData = () => {
     setFamilias(listFamilias());
@@ -102,6 +110,74 @@ export default function Admin() {
     setGeneralSanctuaryTheme(nuevoTema);
     const info = THEMES.find((t) => t.id === nuevoTema);
     toast(`Color general del obituario actualizado a "${info?.label || nuevoTema}"`, "success");
+  };
+
+  const handleAnalizarImagenes = async () => {
+    if (!isSupabaseConfigured) {
+      toast("Supabase no está configurado: el almacenamiento local no guarda archivos huérfanos", "info");
+      return;
+    }
+    setAnalizandoImagenes(true);
+    try {
+      const personas = listPersonas(undefined, true).map((p) => ({
+        id: p.id,
+        foto: p.foto,
+        galeria: p.galeria,
+        musica: p.musica,
+        musicas_rotacion: p.musicas_rotacion,
+      }));
+      const fotosPendientes = listFotosPendientes().map((f) => ({ url: f.url }));
+      const configValores = [
+        getConfig("fotos_pendientes"),
+        getConfig("musica_general_url"),
+        getConfig("musica_general_titulo"),
+      ];
+      const res = await auditarImagenesHuerfanas({ personas, fotosPendientes, configValores });
+      if (res.error) {
+        toast(res.error, "warning");
+        setAuditoriaImagenes(null);
+        return;
+      }
+      setAuditoriaImagenes({ huerfanas: res.huerfanas, referenciadas: res.referenciadas });
+      toast(
+        res.huerfanas.length === 0
+          ? "✅ No se encontraron imágenes huérfanas"
+          : `⚠️ ${res.huerfanas.length} imagen(es) sin usar encontradas`,
+        res.huerfanas.length === 0 ? "success" : "warning"
+      );
+    } finally {
+      setAnalizandoImagenes(false);
+    }
+  };
+
+  const handleBorrarHuerfana = async (fullPath: string) => {
+    setBorrandoHuerfana(fullPath);
+    const res = await borrarImagenesHuerfanas([fullPath]);
+    setBorrandoHuerfana(null);
+    if (res.borradas > 0) {
+      toast("Imagen huérfana borrada", "delete");
+      setAuditoriaImagenes((prev) =>
+        prev ? { ...prev, huerfanas: prev.huerfanas.filter((h) => h.fullPath !== fullPath) } : prev
+      );
+    } else {
+      toast(res.errores[0] || "No se pudo borrar el archivo", "warning");
+    }
+  };
+
+  const handleBorrarTodasHuerfanas = async () => {
+    const claves = (auditoriaImagenes?.huerfanas ?? []).map((h) => h.fullPath);
+    if (claves.length === 0) return;
+    setBorrandoTodas(true);
+    const res = await borrarImagenesHuerfanas(claves);
+    setBorrandoTodas(false);
+    if (res.borradas > 0 || res.errores.length === 0) {
+      toast(`${res.borradas} imagen(es) huérfana(s) borradas`, "delete");
+      setAuditoriaImagenes((prev) => (prev ? { ...prev, huerfanas: [] } : prev));
+    } else {
+      toast(res.errores[0] || "No se pudieron borrar", "warning");
+      // Refrescar listado por si algunas se pudieron borrar
+      void handleAnalizarImagenes();
+    }
   };
 
   useEffect(() => {
@@ -347,7 +423,7 @@ export default function Admin() {
                   <div className="w-14 h-14 rounded-full border border-gold/40 bg-stone-950 overflow-hidden shrink-0">
                     {p.foto ? (
                       <img
-                        src={p.foto}
+                        src={normalizarUrlImagen(p.foto)}
                         alt=""
                         style={{ objectPosition: p.foto_pos || "50% 20%" }}
                         className="w-full h-full object-cover"
@@ -450,7 +526,7 @@ export default function Admin() {
                 className="rounded-xl overflow-hidden border border-white/10 bg-stone-950/80 flex flex-col"
               >
                 <img
-                  src={f.url}
+                  src={normalizarUrlImagen(f.url)}
                   alt={`Foto para ${f.persona_nombre}`}
                   className="w-full h-48 object-cover"
                 />
@@ -468,6 +544,11 @@ export default function Admin() {
                     <div className="text-stone-400">
                       Enviada por: <span className="text-amber-200">{f.remitente}</span>
                     </div>
+                    {f.comentario && (
+                      <div className="text-stone-300 bg-stone-950/70 border border-gold/15 rounded-lg px-2 py-1.5 text-[11px] leading-snug">
+                        💬 “{f.comentario}”
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -503,6 +584,94 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* SECCIÓN: AUDITORÍA DE IMÁGENES HUÉRFANAS */}
+      <div className="mt-8 rounded-2xl border border-sky-500/40 bg-gradient-to-b from-sky-950/30 via-stone-900/90 to-stone-950 p-5 sm:p-6 shadow-[0_4px_30px_rgba(14,165,233,0.12)]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-sky-500/20 mb-4">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-full bg-sky-500/20 text-sky-300 grid place-items-center text-lg shrink-0">
+              🧹
+            </span>
+            <div>
+              <h2 className="font-serif text-2xl text-[#f4f1eb]">Auditoría de Imágenes Huérfanas</h2>
+              <p className="text-xs text-stone-400">
+                Detecta y borra archivos en el bucket <code>panteon-media</code> que ya no se usan (retratos reemplazados, galerías eliminadas, perfiles borrados, fotos rechazadas).
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleAnalizarImagenes}
+            disabled={analizandoImagenes}
+            className="self-start sm:self-auto px-4 sm:px-5 py-2.5 rounded-full text-[11px] uppercase tracking-[0.18em] bg-sky-600 hover:bg-sky-500 text-white transition-colors disabled:opacity-60 disabled:cursor-default cursor-pointer"
+          >
+            {analizandoImagenes ? "Analizando…" : auditoriaImagenes ? "Volver a analizar" : "Analizar imágenes"}
+          </button>
+        </div>
+
+        {!isSupabaseConfigured && (
+          <p className="text-xs text-amber-200/90 bg-amber-950/30 border border-amber-500/25 rounded-xl px-4 py-3">
+            ⚠️ Supabase no está configurado: las imágenes en este modo se guardan como data-URL en localStorage y no quedan archivos huérfanos en la nube.
+          </p>
+        )}
+
+        {auditoriaImagenes && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+              <span className="px-3 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
+                {auditoriaImagenes.referenciadas} referencia(s) en uso
+              </span>
+              <span className={`px-3 py-1.5 rounded-full font-semibold border ${auditoriaImagenes.huerfanas.length === 0 ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" : "bg-rose-500/15 border-rose-500/35 text-rose-300"}`}>
+                {auditoriaImagenes.huerfanas.length === 0 ? "✓ 0 huérfanas" : `${auditoriaImagenes.huerfanas.length} huérfana(s)`}
+              </span>
+            </div>
+
+            {auditoriaImagenes.huerfanas.length === 0 ? (
+              <p className="text-xs text-emerald-300/90 bg-emerald-950/30 border border-emerald-500/25 rounded-xl px-4 py-3 text-center">
+                🎉 No se encontraron imágenes huérfanas en el bucket.
+              </p>
+            ) : (
+              <>
+                <div className="max-h-64 overflow-y-auto divide-y divide-white/10 border border-white/10 rounded-xl bg-stone-950/60">
+                  {auditoriaImagenes.huerfanas.map((h) => (
+                    <div key={h.fullPath} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-xs text-stone-100 font-mono truncate">uploads/{h.name}</p>
+                        {h.createdAt && (
+                          <p className="text-[10px] text-stone-500">
+                            Creado: {new Date(h.createdAt).toLocaleString("es-DO")}
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleBorrarHuerfana(h.fullPath)}
+                        disabled={borrandoHuerfana === h.fullPath}
+                        className="shrink-0 px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/35 text-rose-300 text-[10px] uppercase tracking-wider transition-colors disabled:opacity-60 cursor-pointer"
+                      >
+                        {borrandoHuerfana === h.fullPath ? "…" : "Borrar"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <p className="text-[11px] text-stone-400">
+                    Acción irreversible. Las imágenes borradas no se pueden recuperar.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleBorrarTodasHuerfanas}
+                    disabled={borrandoTodas}
+                    className="px-4 py-2.5 rounded-xl bg-rose-600/30 hover:bg-rose-600/45 border border-rose-500/45 text-rose-200 text-xs uppercase tracking-wider transition-all disabled:opacity-60 cursor-pointer"
+                  >
+                    {borrandoTodas ? "Borrando…" : `🗑 Borrar todas las huérfanas (${auditoriaImagenes.huerfanas.length})`}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* SECCIÓN: BOT DE TELEGRAM Y ALERTAS MÓVILES */}
       <div className="mt-8 rounded-2xl border border-gold/30 bg-gradient-to-b from-stone-900/90 via-stone-900/70 to-stone-950 p-5 sm:p-6 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
@@ -543,7 +712,7 @@ export default function Admin() {
                 type="text"
                 value={telegramToken}
                 onChange={(e) => setTelegramToken(e.target.value)}
-                placeholder="Ej: 8560777329:AAEeeq..."
+                placeholder="Ej: 123456789:AAAbbbCCC..."
                 className="w-full bg-stone-950/70 border border-white/10 focus:border-gold/60 rounded-xl px-3.5 py-2.5 text-xs text-stone-100 placeholder:text-stone-600 outline-none transition-colors font-mono"
               />
               {telegramBotInfo && (

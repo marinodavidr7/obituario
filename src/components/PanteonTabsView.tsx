@@ -1,5 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "@/components/Link";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+
 import PersonaCard from "@/components/PersonaCard";
 import type { Persona, Familia } from "@/lib/db";
 import { triggerHaptic } from "@/lib/haptics";
@@ -204,7 +206,7 @@ export default function PanteonTabsView({
                         className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-stone-900 overflow-hidden bg-stone-950 shadow-md"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={src} alt="" className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition duration-300" />
+                        <img src={normalizarUrlImagen(src)} alt="" className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition duration-300" />
                       </div>
                     ))}
                   </div>

@@ -1,4 +1,6 @@
 import Link from "@/components/Link";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+
 import { esPerfilPolicial, getDecoracionPersona, type Persona } from "@/lib/db";
 import { getDecoracionInfo } from "@/lib/decoraciones";
 import EscudoPolicia from "@/components/EscudoPolicia";
@@ -18,7 +20,7 @@ export default function PersonaCard({ p }: { p: Persona }) {
         {p.foto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={p.foto}
+            src={normalizarUrlImagen(p.foto)}
             alt={p.nombre}
             className="portrait-inner object-cover w-full h-full"
             style={{ objectPosition: p.foto_pos || "50% 20%" }}

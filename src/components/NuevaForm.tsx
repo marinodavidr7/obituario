@@ -13,6 +13,9 @@ import {
   type Persona,
 } from "@/lib/db";
 import EscudoPolicia from "@/components/EscudoPolicia";
+import { showToast } from "@/components/toast";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+import { normalizarGaleria } from "@/lib/galeria";
 
 type Familia = { id: string; apellido: string };
 
@@ -70,7 +73,12 @@ export default function NuevaForm({
   const [fotoUrl, setFotoUrl] = useState(personaInicial?.foto || "");
   const [fotoFile, setFotoFile] = useState<File[]>([]);
   const [galFiles, setGalFiles] = useState<File[]>([]);
-  const [galUrls, setGalUrls] = useState(personaInicial?.galeria ? personaInicial.galeria.join("\n") : "");
+  const [galCaptions, setGalCaptions] = useState<string[]>([]);
+  const [galLinks, setGalLinks] = useState<{ u: string; c: string }[]>(() =>
+    personaInicial?.galeria
+      ? normalizarGaleria(personaInicial.galeria).map((i) => ({ u: i.url, c: i.comentario ?? "" }))
+      : []
+  );
   const [datos, setDatos] = useState(
     personaInicial?.datos?.length
       ? personaInicial.datos.map(([k, v]) => ({ k, v }))
@@ -159,20 +167,26 @@ export default function NuevaForm({
   }, [JSON.stringify(personaInicial?.videos)]);
 
   const fotoSubidaUrl = useObjectUrls(fotoFile)[0];
-  const fotoPrev = eliminarFoto ? "" : (fotoSubidaUrl || fotoUrl.trim());
+  const fotoPrev = eliminarFoto ? "" : (fotoSubidaUrl || normalizarUrlImagen(fotoUrl));
   const isFotoGif = Boolean(
     (rawOriginalFile && (rawOriginalFile.type === "image/gif" || rawOriginalFile.name.toLowerCase().endsWith(".gif"))) ||
     fotoPrev.toLowerCase().includes(".gif")
   );
   const fotoPos = `${posX}% ${posY}%`;
   const galPrev = useObjectUrls(galFiles);
-  const galUrlList = galUrls.split("\n").map((l) => l.trim()).filter(Boolean);
+  const anyadirEnlace = () => setGalLinks((l) => [...l, { u: "", c: "" }]);
+  const quitarEnlace = (i: number) => setGalLinks((l) => l.filter((_, j) => j !== i));
+  const setEnlaceUrl = (i: number, v: string) => setGalLinks((l) => l.map((x, j) => (j === i ? { ...x, u: v } : x)));
+  const setEnlaceComentario = (i: number, v: string) => setGalLinks((l) => l.map((x, j) => (j === i ? { ...x, c: v } : x)));
   const musicaSubidaUrl = useObjectUrls(musicaFile)[0];
   const musicaPrev = eliminarMusica ? "" : (musicaSubidaUrl || musicaUrl.trim());
 
   function pick(input: HTMLInputElement | null, files: File[], setter: (f: File[]) => void, multiple: boolean) {
     const list = Array.from(input?.files ?? []);
     setter(multiple ? [...files, ...list] : list.slice(0, 1));
+    if (multiple && setter === setGalFiles) {
+      setGalCaptions((c) => [...c, ...list.map(() => "")]);
+    }
     if (input) {
       const dt = new DataTransfer();
       (multiple ? [...files, ...list] : list.slice(0, 1)).forEach((f) => dt.items.add(f));
@@ -183,6 +197,7 @@ export default function NuevaForm({
   function quitarGal(i: number) {
     const rest = galFiles.filter((_, j) => j !== i);
     setGalFiles(rest);
+    setGalCaptions((c) => c.filter((_, j) => j !== i));
     if (galInput.current) {
       const dt = new DataTransfer();
       rest.forEach((f) => dt.items.add(f));
@@ -190,11 +205,7 @@ export default function NuevaForm({
     }
   }
 
-  function quitarGalUrl(i: number) {
-    const list = galUrls.split("\n").map((l) => l.trim()).filter(Boolean);
-    const rest = list.filter((_, j) => j !== i);
-    setGalUrls(rest.join("\n"));
-  }
+
 
   return (
     <form
@@ -369,32 +380,42 @@ export default function NuevaForm({
               </button>
             </div>
             <div>
-              <label className={lab}>Fotos por enlace (una URL por línea)</label>
-              <textarea name="galeria" rows={5} value={galUrls} onChange={(e) => setGalUrls(e.target.value)} placeholder={"https://...\nhttps://..."} className={`${inp} resize-none`} />
+              <label className={lab}>Fotos por enlace (cada foto con su comentario)</label>
+              <div className="space-y-2.5">
+                {galLinks.map((link, i) => (
+                  <div key={i} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl border border-white/10 bg-stone-950/60 p-2">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={link.u ? normalizarUrlImagen(link.u) : undefined} alt="" onError={(e) => ((e.target as HTMLImageElement).style.opacity = "0.15")} className="w-14 h-14 rounded-lg object-cover bg-stone-900 border border-white/10" />
+                    <div className="min-w-0 space-y-1.5">
+                      <input name="galeria_url" value={link.u} onChange={(e) => setEnlaceUrl(i, e.target.value)} placeholder="https://…" aria-label={`URL de la foto ${i + 1}`} className={`${inp} !py-2 text-xs`} />
+                      <input name="galeria_url_comentario" value={link.c} maxLength={140} onChange={(e) => setEnlaceComentario(i, e.target.value)} placeholder="Comentario para el álbum…" aria-label={`Comentario de la foto ${i + 1}`} className={`${inp} !py-2 text-xs`} />
+                    </div>
+                    <button type="button" onClick={() => quitarEnlace(i)} aria-label={`Quitar enlace ${i + 1}`} className="h-10 w-10 shrink-0 rounded-xl border border-white/10 text-stone-500 hover:text-rose-300 hover:border-rose-400/40 active:scale-95">✕</button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={anyadirEnlace} className="mt-2.5 text-[11px] uppercase tracking-[0.18em] text-gold-soft hover:text-white transition-colors">+ Añadir enlace</button>
             </div>
           </div>
-          {(galPrev.length > 0 || galUrlList.length > 0) && (
+          {galPrev.length > 0 && (
             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2.5 mt-5">
               {galPrev.map((src, i) => (
-                <div key={src} className="relative aspect-square rounded-lg overflow-hidden border border-gold/30 group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="w-full h-full object-cover" />
-                  <button type="button" onClick={() => quitarGal(i)} aria-label="Quitar foto" className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/80 text-xs text-stone-200 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">✕</button>
-                </div>
-              ))}
-              {galUrlList.map((src, i) => (
-                <div key={src + i} className="relative aspect-square rounded-lg overflow-hidden border border-white/10 bg-stone-950 group">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt="" className="w-full h-full object-cover" onError={(e) => ((e.target as HTMLImageElement).style.opacity = "0.15")} />
-                  <button
-                    type="button"
-                    onClick={() => quitarGalUrl(i)}
-                    aria-label="Quitar foto"
-                    className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/80 hover:bg-rose-600 text-xs text-stone-200 hover:text-white transition-all flex items-center justify-center cursor-pointer shadow"
-                    title="Eliminar esta foto"
-                  >
-                    ✕
-                  </button>
+                <div key={src} className="rounded-lg overflow-hidden border border-gold/30 bg-stone-950/60 flex flex-col">
+                  <div className="relative aspect-square group">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="w-full h-full object-cover" />
+                    <button type="button" onClick={() => quitarGal(i)} aria-label="Quitar foto" className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/80 text-xs text-stone-200 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity">✕</button>
+                  </div>
+                  <input
+                    type="text"
+                    name={`galeria_comentario_${i}`}
+                    maxLength={140}
+                    value={galCaptions[i] ?? ""}
+                    onChange={(e) => setGalCaptions((c) => c.map((x, j) => (j === i ? e.target.value : x)))}
+                    placeholder="Comentario para el álbum…"
+                    aria-label={`Comentario para la foto ${i + 1}`}
+                    className="w-full bg-stone-950 border-t border-gold/15 focus:border-gold/50 px-2 py-1.5 text-[10px] text-stone-200 placeholder:text-stone-600 focus:outline-none"
+                  />
                 </div>
               ))}
             </div>
@@ -846,7 +867,7 @@ export default function NuevaForm({
                     setEliminarFoto(false);
                     setFotoUrl("");
                     setRawOriginalFile(f);
-                    toast("GIF animado añadido: se reproducirá en movimiento continuo", "info");
+                    showToast("GIF animado añadido: se reproducirá en movimiento continuo", "info");
                   } else {
                     setRawOriginalFile(f);
                     const tempUrl = URL.createObjectURL(f);

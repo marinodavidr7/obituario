@@ -55,17 +55,9 @@ export async function loginAdmin(
     }
   }
 
-  // 2. Respaldo local de emergencia si Supabase estuviera sin conexión
-  const envPass = (import.meta.env.VITE_ADMIN_PASSWORD as string) || "panteon2026";
-  if (
-    cleanEmail === "davidsbusinessgroup@gmail.com" &&
-    (cleanPass === "@David2026" || cleanPass === envPass)
-  ) {
-    localStorage.setItem(ADMIN_STORAGE_KEY, "authenticated");
-    window.dispatchEvent(new Event("panteon:auth-changed"));
-    return { ok: true };
-  }
-
+  // Sin respaldo local: sin Supabase Auth no hay acceso admin.
+  // El gate de UI (useAdmin) es sólo conveniencia; la autorización real
+  // la aplican RLS/GRANT en el servidor (ver supabase/hardening_2026-11.sql).
   return { ok: false, error: "Correo o contraseña no autorizados." };
 }
 

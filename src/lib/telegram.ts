@@ -204,6 +204,7 @@ export async function notificarFotoPendienteTelegram(
     "──────────────────────────",
     `👤 *Para:* ${foto.persona_nombre}`,
     `✍️ *Enviada por:* ${foto.remitente}`,
+    ...(foto.comentario ? [`💬 *Comentario:* ${foto.comentario}`] : []),
     "⏳ *Estado:* Pendiente de aprobación",
     "──────────────────────────",
     "¿Deseas agregar esta foto a su galería?",

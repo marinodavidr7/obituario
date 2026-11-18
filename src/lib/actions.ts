@@ -13,6 +13,8 @@ import {
   upsertFamilia,
 } from "@/lib/db";
 import { guardarArchivo, guardarImagen } from "@/lib/uploads";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+import { GaleriaItem } from "@/types";
 import { notificarSolicitudTelegram } from "@/lib/telegram";
 import { navigate } from "@/lib/router";
 import type { Dato, TrackRotacion, Video } from "@/types";
@@ -72,7 +74,7 @@ export async function procesarPersonaFormData(formData: FormData) {
   const eliminarFoto = s("eliminar_foto") === "1";
   const fotoArchivo = formData.get("foto_archivo") as File | null;
   const fotoSubida = await guardarImagen(fotoArchivo);
-  const foto = eliminarFoto ? null : (fotoSubida || s("foto") || null);
+  const foto = eliminarFoto ? null : (fotoSubida || normalizarUrlImagen(s("foto")) || null);
   const foto_pos = s("foto_pos") || "50% 20%";
 
   const claves = clean(
@@ -90,15 +92,24 @@ export async function procesarPersonaFormData(formData: FormData) {
     .filter(([k, v]) => Boolean(k && v));
 
   const galeriaFiles = formData.getAll("galeria_archivos") as File[];
-  const subidas: string[] = [];
-  for (const f of galeriaFiles) {
-    const u = await guardarImagen(f);
-    if (u) subidas.push(u);
+  const galCaptions: (string | File)[] = galeriaFiles.map((_, i) => formData.get(`galeria_comentario_${i}`) as string | File);
+  const subidas: GaleriaItem[] = [];
+  for (let i = 0; i < galeriaFiles.length; i++) {
+    const u = await guardarImagen(galeriaFiles[i]);
+    if (u) {
+      const comentario = String(galCaptions[i] ?? "").trim();
+      subidas.push(comentario ? { url: u, comentario } : { url: u, comentario: null });
+    }
   }
-  const urls = s("galeria")
-    .split("\n")
-    .map((x) => x.trim())
-    .filter(Boolean);
+  const galUrlVals = formData.getAll("galeria_url").map((x) => String(x).trim());
+  const galUrlComments = formData.getAll("galeria_url_comentario").map((x) => String(x).trim());
+  const urls: GaleriaItem[] = [];
+  for (let i = 0; i < galUrlVals.length; i++) {
+    const url = normalizarUrlImagen(galUrlVals[i]);
+    if (!url) continue;
+    const comentario = galUrlComments[i] || null;
+    urls.push(comentario ? { url, comentario } : { url, comentario: null });
+  }
 
   const rawUrls = clean(
     formData.getAll("video_url").length > 0

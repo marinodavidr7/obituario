@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import Link from "@/components/Link";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
+
 import Dedicatorias from "@/components/Dedicatorias";
 import NuevaForm from "@/components/NuevaForm";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -9,6 +11,7 @@ import {
   aprobarFotoPendiente,
   deletePersona,
   getPersona,
+  personasSelectColumns,
   getVinculosPersona,
   listDedicatorias,
   listFamilias,
@@ -54,16 +57,21 @@ export default function AdminEditar({ id }: { id: string }) {
     }
 
     if (isSupabaseConfigured) {
-      supabase
-        .from("personas")
-        .select("*")
-        .eq("id", id)
-        .maybeSingle()
-        .then(({ data }) => {
+      void (async () => {
+        try {
+          const cols = await personasSelectColumns();
+          const { data } = await supabase
+            .from("personas")
+            .select(cols)
+            .eq("id", id)
+            .maybeSingle();
           if (data && !isCancelled) {
             setPersona(data as any);
           }
-        });
+        } catch {
+          /* usar caché local */
+        }
+      })();
     }
 
     return () => {
@@ -178,7 +186,7 @@ export default function AdminEditar({ id }: { id: string }) {
                   className="rounded-xl overflow-hidden border border-white/10 bg-stone-950/70 flex flex-col"
                 >
                   <img
-                    src={f.url}
+                    src={normalizarUrlImagen(f.url)}
                     alt={`Foto enviada por ${f.remitente}`}
                     className="w-full h-44 object-cover"
                   />

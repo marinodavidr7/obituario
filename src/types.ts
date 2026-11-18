@@ -1,5 +1,6 @@
 export type Dato = [string, string];
 export type Video = { titulo: string; fuente?: string; url: string };
+export type GaleriaItem = string | { url: string; comentario?: string | null };
 export type VinculoFamiliar = { persona_id: string; relacion: string };
 
 export type TrackRotacion = {
@@ -28,7 +29,7 @@ export type Persona = {
   foto_pos?: string | null;
   bio: string | null;
   datos: Dato[];
-  galeria: string[];
+  galeria: GaleriaItem[];
   videos: Video[];
   visitas: number;
   velas: number;
@@ -74,6 +75,7 @@ export type FotoPendiente = {
   persona_nombre: string;
   url: string;
   remitente: string;
+  comentario?: string | null;
   fecha: string;
 };
 

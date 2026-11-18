@@ -7,7 +7,8 @@
 ALTER PUBLICATION supabase_realtime ADD TABLE familias;
 ALTER PUBLICATION supabase_realtime ADD TABLE personas;
 ALTER PUBLICATION supabase_realtime ADD TABLE dedicatorias;
-ALTER PUBLICATION supabase_realtime ADD TABLE config;
+-- config ya no se publica vía Realtime (podía difundir secretos en la versión anterior);
+-- el endurecimiento la excluye.
 
 -- 2. Habilitar REPLICA IDENTITY FULL para enviar la fila completa en UPDATE y DELETE
 ALTER TABLE familias REPLICA IDENTITY FULL;
