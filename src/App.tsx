@@ -24,8 +24,21 @@ import NotFound from "@/pages/NotFound";
 
 export default function App() {
   const route = useRoute();
+  const [albumAbierto, setAlbumAbierto] = useState(false);
   const [musicaGeneralUrl, setMusicaGeneralUrl] = useState<string | null>(() => getConfig("musica_general_url"));
   const [musicaGeneralTitulo, setMusicaGeneralTitulo] = useState<string | null>(() => getConfig("musica_general_titulo"));
+
+  // Ocultar el banner superior mientras se están viendo las fotos del álbum
+  useEffect(() => {
+    const openAlbum = () => setAlbumAbierto(true);
+    const closeAlbum = () => setAlbumAbierto(false);
+    window.addEventListener("panteon:album-open", openAlbum);
+    window.addEventListener("panteon:album-close", closeAlbum);
+    return () => {
+      window.removeEventListener("panteon:album-open", openAlbum);
+      window.removeEventListener("panteon:album-close", closeAlbum);
+    };
+  }, []);
   const [adminVolume, setAdminVolume] = useState<number>(() => {
     const v = parseInt(getConfig("musica_volumen") || "70", 10);
     return (isNaN(v) ? 70 : v) / 100;
@@ -87,10 +100,11 @@ export default function App() {
   return (
     <ToastProvider>
       <div className="selection:bg-gold/30 selection:text-gold-soft font-sans min-h-[100dvh] flex flex-col antialiased">
-        <Stars />
+        {route.name !== "persona" && <Stars />}
         <OfflineNotification />
 
-        {/* Barra superior con soporte para Safe Area Top (Notch / Dynamic Island) */}
+        {/* Barra superior con soporte para Safe Area Top (Notch / Dynamic Island) — oculta mientras se ven las fotos del álbum */}
+        {!albumAbierto && (
         <nav className="sticky top-0 z-40 backdrop-blur-md bg-stone-950/80 border-b border-gold/15 pt-[env(safe-area-inset-top)]">
           <div className="w-full px-4 sm:px-8 xl:px-12 h-14 sm:h-16 flex items-center justify-between gap-3 sm:gap-4">
             <Link
@@ -130,6 +144,7 @@ export default function App() {
             </div>
           </div>
         </nav>
+        )}
 
         {/* Contenido principal con espaciado vertical armónico y safe area para el menú móvil */}
         <main className="relative z-10 flex-1 w-full px-3.5 sm:px-6 lg:px-8 xl:px-12 pb-[max(7rem,calc(5.5rem+env(safe-area-inset-bottom)))] sm:pb-8 pt-2">

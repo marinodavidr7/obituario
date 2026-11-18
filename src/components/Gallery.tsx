@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { triggerHaptic } from "@/lib/haptics";
 import { normalizarGaleria } from "@/lib/galeria";
 import type { GaleriaItem } from "@/types";
@@ -26,6 +26,21 @@ export default function Gallery({ fotos: fotosProp, nombre }: { fotos: GaleriaIt
     [fotos.length]
   );
 
+  // Bloquear el scroll de la página y avisar al shell (para ocultar el banner superior)
+  useEffect(() => {
+    if (open === null) return;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    window.dispatchEvent(new Event("panteon:album-open"));
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+      window.dispatchEvent(new Event("panteon:album-close"));
+    };
+  }, [open]);
+
   useEffect(() => {
     if (open === null) return;
     const onKey = (e: KeyboardEvent) => {
@@ -36,6 +51,42 @@ export default function Gallery({ fotos: fotosProp, nombre }: { fotos: GaleriaIt
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, close, move]);
+
+  // Deslizar horizontalmente para cambiar de foto (con tolerancia a vibraciones verticales)
+  const swipeStartX = useRef<number | null>(null);
+  const swipeStartY = useRef<number | null>(null);
+  const didSwipe = useRef(false);
+
+  const onTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
+    didSwipe.current = false;
+  }, []);
+
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      if (swipeStartX.current === null) return;
+      const dx = e.changedTouches[0].clientX - swipeStartX.current;
+      const dy = e.changedTouches[0].clientY - (swipeStartY.current ?? e.changedTouches[0].clientY);
+      // Sólo si el gesto fue claramente horizontal
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        didSwipe.current = true;
+        move(dx < 0 ? 1 : -1);
+      }
+      swipeStartX.current = null;
+      swipeStartY.current = null;
+    },
+    [move]
+  );
+
+  const onOverlayClick = useCallback(() => {
+    // Un swipe no debe cerrarse tocando (el click llega después de touchend)
+    if (didSwipe.current) {
+      didSwipe.current = false;
+      return;
+    }
+    close();
+  }, [close]);
 
   return (
     <>
@@ -118,8 +169,10 @@ export default function Gallery({ fotos: fotosProp, nombre }: { fotos: GaleriaIt
           className="fixed inset-0 z-[100] grid place-items-center bg-black/95 p-3 sm:p-10 select-none"
           role="dialog"
           aria-modal="true"
-          onClick={close}
-          style={{ animation: "backdropIn 200ms ease-out" }}
+          onClick={onOverlayClick}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          style={{ animation: "backdropIn 200ms ease-out", touchAction: "pan-y", overscrollBehavior: "contain" }}
         >
           {/* Botón cerrar seguro para muesca/isla dinámica */}
           <button

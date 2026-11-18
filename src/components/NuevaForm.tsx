@@ -303,7 +303,7 @@ export default function NuevaForm({
             </div>
             <div className="sm:col-span-2">
               <label className={lab}>Biografía y recuerdos</label>
-              <textarea name="bio" rows={5} value={bio} onChange={(e) => setBio(e.target.value)} className={`${inp} resize-none`} placeholder="Cuenta su historia, sus costumbres, lo que más amaba..." />
+              <textarea name="bio" rows={5} value={bio} onChange={(e) => setBio(e.target.value)} className={`${inp} resize-none`} placeholder="Cuenta su historia... (destacá con **doble asterisco** para negrita)" />
             </div>
           </div>
         </Card>

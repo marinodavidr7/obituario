@@ -8,6 +8,8 @@ import { corregirOrtografiaIA } from "@/lib/telegram";
 import { triggerHaptic } from "@/lib/haptics";
 import { formatearFecha } from "@/lib/utils";
 
+const FUENTE_LIBRO = '"Times New Roman", Times, Georgia, serif';
+
 export default function Dedicatorias({
   personaId,
   nombre,
@@ -190,6 +192,7 @@ export default function Dedicatorias({
               if (error) setError("");
             }}
             placeholder="Tu nombre o parentesco (ej: Tu nieto Carlos)"
+            style={{ fontFamily: FUENTE_LIBRO }}
             className="bg-stone-950 border border-white/10 focus:border-gold rounded-lg px-3 py-2 text-base sm:text-xs text-stone-200 focus:outline-none"
           />
           <input
@@ -202,6 +205,7 @@ export default function Dedicatorias({
               if (error) setError("");
             }}
             placeholder="Escribe una anécdota, oración o palabra de cariño..."
+            style={{ fontFamily: FUENTE_LIBRO }}
             className="sm:col-span-2 bg-stone-950 border border-white/10 focus:border-gold rounded-lg px-3 py-2 text-base sm:text-xs text-stone-200 focus:outline-none"
           />
         </div>
@@ -290,15 +294,15 @@ export default function Dedicatorias({
               </div>
             ) : (
               <>
-                <p className="font-sans text-[14.5px] sm:text-[15.5px] text-stone-100 font-normal leading-relaxed tracking-normal select-text break-words">
+                <p style={{ fontFamily: FUENTE_LIBRO }} className="text-[14.5px] sm:text-[15.5px] text-stone-100 font-normal leading-relaxed tracking-normal select-text break-words">
                   “{r.texto}”
                 </p>
                 <div className="mt-3.5 pt-2.5 border-t border-white/5 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <span className="text-pink-300 font-medium tracking-wide">
+                  <span style={{ fontFamily: FUENTE_LIBRO }} className="text-pink-200 font-medium tracking-wide">
                     — {r.autor}
                   </span>
                   <div className="flex items-center gap-2 sm:gap-3">
-                    <span className="text-stone-400 text-[11px] sm:text-xs font-sans">
+                    <span style={{ fontFamily: FUENTE_LIBRO }} className="text-stone-400 text-[11px] sm:text-xs">
                       {formatearFecha(r.fecha)}
                     </span>
                     {esAdmin && (

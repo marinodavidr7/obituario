@@ -14,6 +14,7 @@ import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
 import { applySoulTheme, clearSoulTheme, getGeneralSanctuaryTheme } from "@/lib/theme";
 import { addVisita, deletePersona, esPerfilPolicial, getDecoracionPersona, getFamilia, getPersona, getVinculosPersona, listDedicatorias, listPersonas, personasSelectColumns } from "@/lib/db";
+import BiografiaLiteraria from "@/components/BiografiaLiteraria";
 import { getDecoracionInfo } from "@/lib/decoraciones";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { useAdmin } from "@/lib/auth";
@@ -518,7 +519,7 @@ export default function PersonaView({ id }: { id: string }) {
               );
             })()}
             {p.epitafio && (
-              <blockquote className="font-sans text-[15px] sm:text-[17px] font-normal leading-relaxed tracking-wide text-[#f3e6cb] mt-3.5 sm:mt-4 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-gold/15">
+              <blockquote style={{ fontFamily: '"Times New Roman", Times, Georgia, serif' }} className="text-[15px] sm:text-[17px] font-normal leading-relaxed tracking-wide text-[#f3e6cb] mt-3.5 sm:mt-4 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-gold/15">
                 “{p.epitafio}”
               </blockquote>
             )}
@@ -568,11 +569,7 @@ export default function PersonaView({ id }: { id: string }) {
                 )}
               </div>
             )}
-            {p.bio && (
-              <p className="text-xs sm:text-sm font-light leading-relaxed text-stone-300 mt-3 sm:mt-4 text-left px-1 whitespace-pre-line break-words">
-                {p.bio}
-              </p>
-            )}
+            {p.bio && <BiografiaLiteraria bio={p.bio} />}
             <CompartirHomenaje
               personaId={p.id}
               nombre={p.nombre}
@@ -584,17 +581,22 @@ export default function PersonaView({ id }: { id: string }) {
           {Array.isArray(p.datos) && p.datos.length > 0 && (
             <section className="mt-6 sm:mt-8">
               <Titulo>Semblanza y Raíces</Titulo>
-              <dl className="grid grid-cols-2 gap-px bg-white/10 border border-white/10 rounded-xl overflow-hidden">
+              <dl className="divide-y divide-white/[0.06] border border-gold/15 rounded-2xl overflow-hidden bg-[#0b0e12]/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                 {p.datos.map((item, idx) => {
                   const k = Array.isArray(item) ? item[0] : (item as any)?.k;
                   const v = Array.isArray(item) ? item[1] : (item as any)?.v;
                   if (!k || !v) return null;
                   return (
-                    <div key={k + idx} className="bg-[#0e1217] p-3 sm:p-3.5">
-                      <dt className="text-[9px] sm:text-[10px] tracking-[0.18em] uppercase text-stone-400 mb-0.5 sm:mb-1">
+                    <div
+                      key={k + idx}
+                      className="grid grid-cols-[110px_1fr] sm:grid-cols-[150px_1fr] gap-3 sm:gap-5 px-4 py-3 sm:px-5 sm:py-3.5 items-baseline"
+                    >
+                      <dt className="text-[9px] sm:text-[10px] tracking-[0.22em] uppercase text-gold-soft/75 leading-snug">
                         {k}
                       </dt>
-                      <dd className="text-xs sm:text-sm text-stone-200">{v}</dd>
+                      <dd className="text-[13px] sm:text-[15px] text-stone-100 font-light leading-snug break-words">
+                        {v}
+                      </dd>
                     </div>
                   );
                 })}
