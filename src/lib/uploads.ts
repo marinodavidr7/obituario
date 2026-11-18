@@ -1,17 +1,18 @@
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 
 /**
- * Comprime y optimiza imágenes estáticas (JPG, PNG, WebP) antes de subirlas.
- * IMPORTANTE: Si es un GIF animado, se devuelve intacto para no perder sus fotogramas de animación.
+ * Convierte JPG y PNG a WebP antes de subirlas (calidad 0.82), reduciendo dimensión a 1400px máx.
+ * IMPORTANTE:
+ *  - GIF: se devuelve intacto (no perder fotogramas).
+ *  - WebP, SVG y cualquier otro formato: se devuelven intactos.
+ *  - Sólo JPG/JPEG y PNG pasan por canvas; fallback a JPEG si el navegador no soporta WebP.
  */
 export async function comprimirImagenAntesDeSubir(file: File): Promise<File> {
-  const isGif = file.type === "image/gif" || file.name.toLowerCase().endsWith(".gif");
-  if (isGif || !file.type.startsWith("image/")) {
-    return file;
-  }
-
-  // Si ya es muy liviana (< 180 KB), no hace falta recomprimir
-  if (file.size < 180 * 1024) {
+  const isJpgOrPng =
+    file.type === "image/jpeg" ||
+    file.type === "image/png" ||
+    /\.(jpe?g|png)$/i.test(file.name);
+  if (!isJpgOrPng) {
     return file;
   }
 
@@ -50,16 +51,28 @@ export async function comprimirImagenAntesDeSubir(file: File): Promise<File> {
 
       canvas.toBlob(
         (blob) => {
-          if (!blob || blob.size >= file.size) {
-            return resolve(file);
+          if (blob) {
+            const webpFile = new File([blob], file.name.replace(/\.[^.]+$/, ".webp"), {
+              type: "image/webp",
+              lastModified: Date.now(),
+            });
+            return resolve(webpFile);
           }
-          const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), {
-            type: "image/jpeg",
-            lastModified: Date.now(),
-          });
-          resolve(compressedFile);
+          // Fallback: navegador sin codificador WebP → JPEG como antes
+          canvas.toBlob(
+            (jpeg) => {
+              if (!jpeg) return resolve(file);
+              const jpegFile = new File([jpeg], file.name.replace(/\.[^.]+$/, ".jpg"), {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              });
+              resolve(jpegFile);
+            },
+            "image/jpeg",
+            0.82
+          );
         },
-        "image/jpeg",
+        "image/webp",
         0.82
       );
     };
