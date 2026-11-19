@@ -49,7 +49,7 @@ async function getBotConfig(supabase: any): Promise<BotConfig> {
     return cachedBotConfig.data;
   }
 
-  const token = process.env.VITE_TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN;
+  let token = process.env.VITE_TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN;
   let chatId = process.env.VITE_TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHAT_ID || "";
   let siteUrl = process.env.VITE_SITE_URL || process.env.SITE_URL || "https://obituariocloud.vercel.app";
   let openrouterKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
@@ -214,11 +214,17 @@ export default async function handler(req: any, res: any) {
     ""
   );
   // Operaciones de gestión (aprobar/rechazar/comandos): sólo guardianes autorizados.
-  // Si no hay allowlist configurada, se rechazan en silencio (añadir ids en
-  // TELEGRAM_ADMIN_CHAT_IDS para habilitar el bot de administración).
-  const isAdminChat = () => {
+  // Se autoriza TELEGRAM_ADMIN_CHAT_IDS y, además, el chat configurado para recibir
+  // los avisos (telegram_chat_id), de modo que el propio guardián siempre pueda usar el bot.
+  const isAdminChat = (extraIds: Array<string | number | undefined | null> = []) => {
     const chat = esperadoChatId();
-    return ADMIN_CHAT_IDS.length > 0 && chat.length > 0 && ADMIN_CHAT_IDS.includes(chat);
+    if (!chat) return false;
+    const permitidos = new Set<string>(ADMIN_CHAT_IDS);
+    for (const id of extraIds) {
+      const limpio = String(id ?? "").trim();
+      if (limpio) permitidos.add(limpio);
+    }
+    return permitidos.has(chat);
   };
   // Privilegios de datos: sin service role el bot no puede operar (lo exige RLS).
   const canOperate = serviceReady() && supabase;
@@ -236,7 +242,16 @@ export default async function handler(req: any, res: any) {
     if (!textoOriginal) {
       return res.status(400).json({ ok: false, error: "Texto vacío" });
     }
-    const openrouterKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
+    let openrouterKey = process.env.OPENROUTER_API_KEY || process.env.VITE_OPENROUTER_API_KEY || "";
+    if (!openrouterKey && supabase) {
+      // También admitir la clave guardada desde el panel de administración.
+      try {
+        const cfg = await getBotConfig(supabase);
+        openrouterKey = cfg.openrouterKey || "";
+      } catch {
+        /* sin clave disponible */
+      }
+    }
     if (!openrouterKey) {
       return res.status(200).json({ ok: false, textoCorregido: textoOriginal, error: "IA no configurada" });
     }
@@ -276,11 +291,17 @@ export default async function handler(req: any, res: any) {
   if (!canOperate) {
     return res.status(200).json({ ok: false, error: "Bot no configurado (falta SUPABASE_URL o SUPABASE_SERVICE_ROLE_KEY)" });
   }
-  if (!isAdminChat()) {
+
+  const botConfig = await getBotConfig(supabase!);
+  const { token, siteUrl, openrouterKey } = botConfig;
+
+  // El chat que recibe los avisos del santuario es siempre un guardián autorizado,
+  // aunque TELEGRAM_ADMIN_CHAT_IDS no esté definido en el servidor.
+  if (!isAdminChat([botConfig.chatId, process.env.TELEGRAM_CHAT_ID, process.env.VITE_TELEGRAM_CHAT_ID])) {
+    console.warn("[Telegram] Mensaje ignorado de chat no autorizado:", esperadoChatId());
     return res.status(200).json({ ok: true });
   }
 
-  const { token, siteUrl, openrouterKey } = await getBotConfig(supabase!);
   if (!token) {
     return res.status(200).json({ ok: false, error: "Bot no configurado (falta TELEGRAM_BOT_TOKEN)" });
   }
