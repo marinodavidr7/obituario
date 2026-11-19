@@ -179,6 +179,12 @@ export async function solicitarInscripcion(formData: FormData): Promise<void> {
     );
   }
 
+  if (!s("contacto")) {
+    throw new Error(
+      "El teléfono o WhatsApp de contacto es obligatorio para inscribir a un ser querido."
+    );
+  }
+
   const data = await procesarPersonaFormData(formData);
   const fechaSolicitud = new Date().toLocaleString("es-ES", {
     day: "numeric",

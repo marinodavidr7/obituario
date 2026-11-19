@@ -16,15 +16,16 @@ import EscudoPolicia from "@/components/EscudoPolicia";
 import { showToast } from "@/components/toast";
 import { normalizarUrlImagen } from "@/lib/imageUrl";
 import { normalizarGaleria } from "@/lib/galeria";
+import { generarBiografia } from "@/lib/ia";
 
 type Familia = { id: string; apellido: string };
 
 const inp = "w-full box-border bg-stone-950/70 border border-white/12 focus:border-gold/70 rounded-xl px-3.5 py-2.5 text-base sm:text-sm text-stone-100 placeholder:text-stone-400 placeholder-stone-400 focus:outline-none transition-colors";
 const lab = "block text-[10px] uppercase tracking-[0.2em] text-stone-400 mb-1.5";
 
-function Card({ n, titulo, nota, children }: { n: string; titulo: string; nota?: string; children: React.ReactNode }) {
+function Card({ n, titulo, nota, className = "", children }: { n: string; titulo: string; nota?: string; className?: string; children: React.ReactNode }) {
   return (
-    <section className="w-full rounded-2xl border border-white/10 bg-stone-900/50 p-3.5 sm:p-7 shadow-lg">
+    <section className={`w-full rounded-2xl border border-white/10 bg-stone-900/50 p-3.5 sm:p-7 shadow-lg ${className}`}>
       <header className="flex items-baseline gap-3 mb-4 sm:mb-5 pb-3 border-b border-white/5">
         <span className="font-serif text-gold text-lg">{n}</span>
         <h2 className="font-serif text-xl sm:text-2xl text-stone-100">{titulo}</h2>
@@ -70,6 +71,8 @@ export default function NuevaForm({
   const [fechas, setFechas] = useState(personaInicial?.fechas || "");
   const [epitafio, setEpitafio] = useState(personaInicial?.epitafio || "");
   const [bio, setBio] = useState(personaInicial?.bio || "");
+  const [generandoBio, setGenerandoBio] = useState(false);
+  const [bioRespaldo, setBioRespaldo] = useState<string | null>(null);
   const [fotoUrl, setFotoUrl] = useState(personaInicial?.foto || "");
   const [fotoFile, setFotoFile] = useState<File[]>([]);
   const [galFiles, setGalFiles] = useState<File[]>([]);
@@ -205,6 +208,33 @@ export default function NuevaForm({
     }
   }
 
+  const handleGenerarBiografia = async () => {
+    const notas = bio.trim();
+    if (notas.length < 10) {
+      showToast("Escribe primero unas notas o recuerdos (al menos unas palabras).", "info");
+      return;
+    }
+    setGenerandoBio(true);
+    try {
+      const texto = await generarBiografia({
+        nombre,
+        apodo,
+        anios,
+        fechas,
+        epitafio,
+        familia: familias.find((f) => f.id === familiaSeleccionada)?.apellido || "",
+        notas,
+      });
+      setBioRespaldo(notas);
+      setBio(texto);
+      showToast("Biografía redactada con IA. Revísala y ajústala a tu gusto ✨", "success");
+    } catch (err: any) {
+      showToast(err?.message || "No se pudo redactar la biografía con IA.", "error");
+    } finally {
+      setGenerandoBio(false);
+    }
+  };
+
 
 
   return (
@@ -231,10 +261,12 @@ export default function NuevaForm({
                 />
               </div>
               <div>
-                <label className={lab}>Teléfono, WhatsApp o Correo</label>
+                <label className={lab}>Teléfono o WhatsApp *</label>
                 <input
                   name="contacto"
-                  placeholder="Ej: +34 600 000 000 o tu@correo.com"
+                  type="tel"
+                  required
+                  placeholder="Ej: +34 600 000 000"
                   className={inp}
                 />
               </div>
@@ -302,8 +334,48 @@ export default function NuevaForm({
               <input name="epitafio" value={epitafio} onChange={(e) => setEpitafio(e.target.value)} placeholder="Su risa sigue sonando en el patio de la casa." className={inp} />
             </div>
             <div className="sm:col-span-2">
-              <label className={lab}>Biografía y recuerdos</label>
-              <textarea name="bio" rows={5} value={bio} onChange={(e) => setBio(e.target.value)} className={`${inp} resize-none`} placeholder="Cuenta su historia... (destacá con **doble asterisco** para negrita)" />
+              <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2">
+                <label className={`${lab} mb-0`}>Biografía y recuerdos</label>
+                <div className="flex items-center gap-2">
+                  {bioRespaldo !== null && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBio(bioRespaldo);
+                        setBioRespaldo(null);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-white/15 bg-stone-950/60 hover:bg-stone-900 px-2.5 py-1 text-[11px] text-stone-300 transition-colors"
+                    >
+                      ↩ Deshacer
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleGenerarBiografia}
+                    disabled={generandoBio}
+                    title="La IA redacta una biografía a partir de tus notas"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-gold/45 bg-gold/10 hover:bg-gold/20 px-3 py-1 text-[11px] font-medium text-gold-soft transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <span aria-hidden="true">{generandoBio ? "⏳" : "✨"}</span>
+                    {generandoBio ? "Redactando…" : bio.trim() ? "Reescribir con IA" : "Redactar con IA"}
+                  </button>
+                </div>
+              </div>
+              <textarea
+                name="bio"
+                rows={5}
+                value={bio}
+                onChange={(e) => {
+                  setBio(e.target.value);
+                  setBioRespaldo(null);
+                }}
+                className={`${inp} resize-none`}
+                placeholder="Cuenta su historia... (destacá con **doble asterisco** para negrita)"
+              />
+              <p className="mt-1.5 text-[11px] leading-relaxed text-stone-500">
+                Consejo: escribe notas sueltas (quién era, a qué se dedicaba, anécdotas, lugares, su carácter…) y pulsa{" "}
+                <span className="text-gold-soft">✨ Redactar con IA</span> para convertirlas en una biografía. Podrás editarla después.
+              </p>
             </div>
           </div>
         </Card>
@@ -609,6 +681,7 @@ export default function NuevaForm({
             n="VII"
             titulo="Consentimiento Legal y Protección Familiar"
             nota="Declaración obligatoria para evitar litigios y proteger los derechos familiares"
+            className="font-times"
           >
             <div className="space-y-4">
               <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200/90 leading-relaxed">

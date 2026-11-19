@@ -182,6 +182,12 @@ html {
   -webkit-text-size-adjust: 100%;
 }
 
+/* Tipografía Times New Roman para Consentimiento Legal y Protección Familiar */
+.font-times,
+.font-times * {
+  font-family: "Times New Roman", Times, serif !important;
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: var(--theme-bg);

@@ -23,8 +23,10 @@ export default function MobileBottomNav() {
   const isAdmin = route.name.startsWith("admin");
   const isFamilia = route.name === "familia";
   const isPersona = route.name === "persona";
+  const isFormulario =
+    route.name === "inscribir" || route.name === "admin-nueva" || route.name === "admin-editar";
 
-  if (isPersona) return null;
+  if (isPersona || isFormulario) return null;
 
   return (
     <nav

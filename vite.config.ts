@@ -1,9 +1,17 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "node:path";
 import fs from "node:fs";
+import iaHandler from "./api/ia.ts";
+
+// En desarrollo, Vite no vuelca el .env en process.env. Lo hacemos para que el
+// handler /api/ia pueda leer OPENROUTER_API_KEY y las claves de Supabase.
+Object.assign(
+  process.env,
+  loadEnv(process.env.NODE_ENV === "production" ? "production" : "development", process.cwd(), "")
+);
 
 export default defineConfig({
   plugins: [
@@ -82,6 +90,57 @@ export default defineConfig({
       },
       devOptions: { enabled: false },
     }),
+    {
+      name: "dev-api-ia",
+      configureServer(server) {
+        // Emula la función serverless /api/ia durante `npm run dev`.
+        server.middlewares.use("/api/ia", async (req, res, next) => {
+          if (req.method === "GET") {
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ ok: true, message: "Servicio de redacción IA activo (dev)." }));
+            return;
+          }
+          if (req.method !== "POST") {
+            next();
+            return;
+          }
+
+          try {
+            const trozos: Buffer[] = [];
+            for await (const trozo of req) trozos.push(Buffer.from(trozo as any));
+            const crudo = Buffer.concat(trozos).toString("utf8");
+            const body = crudo ? JSON.parse(crudo) : {};
+
+            const resVercel: any = {
+              statusCode: 200,
+              status(code: number) {
+                this.statusCode = code;
+                return this;
+              },
+              setHeader(clave: string, valor: string) {
+                res.setHeader(clave, valor);
+              },
+              json(obj: any) {
+                res.statusCode = this.statusCode;
+                res.setHeader("Content-Type", "application/json; charset=utf-8");
+                res.end(JSON.stringify(obj));
+              },
+            };
+
+            await iaHandler(
+              { method: req.method, body, headers: req.headers, socket: req.socket },
+              resVercel
+            );
+          } catch (err) {
+            console.error("[dev /api/ia]", err);
+            res.statusCode = 500;
+            res.setHeader("Content-Type", "application/json; charset=utf-8");
+            res.end(JSON.stringify({ ok: false, error: "Error interno del servicio de IA." }));
+          }
+        });
+      },
+    },
     {
       name: "local-uploads-middleware",
       configureServer(server) {
