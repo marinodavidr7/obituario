@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import Link from "@/components/Link";
 import Stars from "@/components/Stars";
 import Buscador from "@/components/Buscador";
@@ -7,20 +7,23 @@ import AudioPlayer from "@/components/AudioPlayer";
 import OfflineNotification from "@/components/OfflineNotification";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { ToastProvider } from "@/components/toast";
+import { PageSkeleton } from "@/components/Skeleton";
 import { getConfig } from "@/lib/db";
 import { useRoute } from "@/lib/router";
 
-// Vistas
+// Vistas principales (se mantienen en el bundle inicial para pintar sin esperas).
 import Home from "@/pages/Home";
 import PersonaView from "@/pages/PersonaView";
 import FamiliaView from "@/pages/FamiliaView";
-import Inscribir from "@/pages/Inscribir";
-import InscribirGracias from "@/pages/InscribirGracias";
-import Admin from "@/pages/Admin";
-import AdminNueva from "@/pages/AdminNueva";
-import AdminEditar from "@/pages/AdminEditar";
-import Terminos from "@/pages/Terminos";
 import NotFound from "@/pages/NotFound";
+
+// Vistas secundarias: se descargan sólo al entrar (menos JS en la primera carga).
+const Inscribir = lazy(() => import("@/pages/Inscribir"));
+const InscribirGracias = lazy(() => import("@/pages/InscribirGracias"));
+const Admin = lazy(() => import("@/pages/Admin"));
+const AdminNueva = lazy(() => import("@/pages/AdminNueva"));
+const AdminEditar = lazy(() => import("@/pages/AdminEditar"));
+const Terminos = lazy(() => import("@/pages/Terminos"));
 
 export default function App() {
   const route = useRoute();
@@ -149,7 +152,7 @@ export default function App() {
         {/* Contenido principal con espaciado vertical armónico y safe area para el menú móvil */}
         <main className="relative z-10 flex-1 w-full px-3.5 sm:px-6 lg:px-8 xl:px-12 pb-[max(7rem,calc(5.5rem+env(safe-area-inset-bottom)))] sm:pb-8 pt-2">
           <ErrorBoundary key={route.name + (("id" in route && route.id) || "")}>
-            {viewContent}
+            <Suspense fallback={<PageSkeleton />}>{viewContent}</Suspense>
           </ErrorBoundary>
         </main>
 

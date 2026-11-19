@@ -140,60 +140,83 @@ export async function personasSelectColumns(): Promise<string> {
   }
 }
 
-export async function syncFromSupabase(): Promise<void> {
-  if (!isSupabaseConfigured) return;
+const SYNC_MIN_INTERVAL_MS = 15000;
+let syncEnCurso: Promise<void> | null = null;
+let ultimaSyncMs = 0;
 
-  try {
-    const cols = await personasSelectColumns();
-    const [famRes, perRes, dedRes, cfgRes] = await Promise.all([
-      supabase.from("familias").select("*").order("orden"),
-      supabase.from("personas").select(cols).order("orden"),
-      supabase.from("dedicatorias").select("*").order("fecha", { ascending: false }),
-      supabase.from("config").select("*"),
-    ]);
+/**
+ * Sincroniza el estado local con Supabase.
+ * - Deduplica llamadas simultáneas (focus + online + polling no se apilan).
+ * - Evita repetir la consulta si acaba de ejecutarse hace menos de 15 s.
+ * Usa `{ forzar: true }` para ignorar el intervalo mínimo.
+ */
+export function syncFromSupabase(opciones: { forzar?: boolean } = {}): Promise<void> {
+  if (!isSupabaseConfigured) return Promise.resolve();
+  if (syncEnCurso) return syncEnCurso;
 
-    if (famRes.data) {
-      cachedFamilias = famRes.data;
-    }
-    if (perRes.data) {
-      // Preservar los colores configurados localmente por el administrador
-      // si Supabase aún no tiene la columna 'color' o viene vacía
-      const storedColors = getStoredSoulColors();
-      const localColorMap = new Map<string, string | null | undefined>(
-        cachedPersonas.map((p) => [p.id, p.color])
-      );
-      cachedPersonas = perRes.data.map((p: any) => ({
-        ...p,
-        color: p.color || storedColors[p.id] || localColorMap.get(p.id) || null,
-      }));
-    }
-    if (dedRes.data) {
-      cachedDedicatorias = dedRes.data;
-    }
-    if (cfgRes.data) {
-      cachedConfig = {};
-      cfgRes.data.forEach((r: { clave: string; valor: string }) => {
-        cachedConfig[r.clave] = r.valor;
-      });
-
-      // Hidratar tipos de flores específicos desde config si están disponibles
-      cachedPersonas.forEach((p) => {
-        const raw = cachedConfig[`flores_tipos_${p.id}`];
-        if (raw) {
-          try {
-            const arr = JSON.parse(raw);
-            if (Array.isArray(arr)) {
-              p.flores_tipos = arr;
-            }
-          } catch {}
-        }
-      });
-    }
-
-    saveState();
-  } catch (err) {
-    console.warn("[Supabase] Sincronización en segundo plano:", err);
+  const ahora = Date.now();
+  if (!opciones.forzar && ahora - ultimaSyncMs < SYNC_MIN_INTERVAL_MS) {
+    return Promise.resolve();
   }
+  ultimaSyncMs = ahora;
+
+  syncEnCurso = (async () => {
+    try {
+      const cols = await personasSelectColumns();
+      const [famRes, perRes, dedRes, cfgRes] = await Promise.all([
+        supabase.from("familias").select("*").order("orden"),
+        supabase.from("personas").select(cols).order("orden"),
+        supabase.from("dedicatorias").select("*").order("fecha", { ascending: false }),
+        supabase.from("config").select("*"),
+      ]);
+
+      if (famRes.data) {
+        cachedFamilias = famRes.data;
+      }
+      if (perRes.data) {
+        // Preservar los colores configurados localmente por el administrador
+        // si Supabase aún no tiene la columna 'color' o viene vacía
+        const storedColors = getStoredSoulColors();
+        const localColorMap = new Map<string, string | null | undefined>(
+          cachedPersonas.map((p) => [p.id, p.color])
+        );
+        cachedPersonas = perRes.data.map((p: any) => ({
+          ...p,
+          color: p.color || storedColors[p.id] || localColorMap.get(p.id) || null,
+        }));
+      }
+      if (dedRes.data) {
+        cachedDedicatorias = dedRes.data;
+      }
+      if (cfgRes.data) {
+        cachedConfig = {};
+        cfgRes.data.forEach((r: { clave: string; valor: string }) => {
+          cachedConfig[r.clave] = r.valor;
+        });
+
+        // Hidratar tipos de flores específicos desde config si están disponibles
+        cachedPersonas.forEach((p) => {
+          const raw = cachedConfig[`flores_tipos_${p.id}`];
+          if (raw) {
+            try {
+              const arr = JSON.parse(raw);
+              if (Array.isArray(arr)) {
+                p.flores_tipos = arr;
+              }
+            } catch {}
+          }
+        });
+      }
+
+      saveState();
+    } catch (err) {
+      console.warn("[Supabase] Sincronización en segundo plano:", err);
+    } finally {
+      syncEnCurso = null;
+    }
+  })();
+
+  return syncEnCurso;
 }
 
 // Registrar manejadores para reflejar eventos Realtime de otros usuarios en la memoria local
@@ -252,7 +275,7 @@ if (typeof window !== "undefined" && isSupabaseConfigured) {
   // Sincronización en segundo plano al recuperar el foco de la pestaña o volver a estar online
   window.addEventListener("focus", () => syncFromSupabase());
   window.addEventListener("online", () => {
-    syncFromSupabase();
+    syncFromSupabase({ forzar: true });
     initRealtime();
   });
 

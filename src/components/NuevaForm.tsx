@@ -457,7 +457,7 @@ export default function NuevaForm({
                 {galLinks.map((link, i) => (
                   <div key={i} className="grid grid-cols-[auto_1fr_auto] items-center gap-2 rounded-xl border border-white/10 bg-stone-950/60 p-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={link.u ? normalizarUrlImagen(link.u) : undefined} alt="" onError={(e) => ((e.target as HTMLImageElement).style.opacity = "0.15")} className="w-14 h-14 rounded-lg object-cover bg-stone-900 border border-white/10" />
+                    <img src={link.u ? normalizarUrlImagen(link.u, 96) : undefined} alt="" onError={(e) => ((e.target as HTMLImageElement).style.opacity = "0.15")} className="w-14 h-14 rounded-lg object-cover bg-stone-900 border border-white/10" />
                     <div className="min-w-0 space-y-1.5">
                       <input name="galeria_url" value={link.u} onChange={(e) => setEnlaceUrl(i, e.target.value)} placeholder="https://…" aria-label={`URL de la foto ${i + 1}`} className={`${inp} !py-2 text-xs`} />
                       <input name="galeria_url_comentario" value={link.c} maxLength={140} onChange={(e) => setEnlaceComentario(i, e.target.value)} placeholder="Comentario para el álbum…" aria-label={`Comentario de la foto ${i + 1}`} className={`${inp} !py-2 text-xs`} />

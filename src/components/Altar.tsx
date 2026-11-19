@@ -245,8 +245,9 @@ export default function Altar({
         >
           {t.tipo === "flor" ? (
             <img
-              src={t.img || "/img/flores_lujo_rojas.png"}
+              src={t.img || "/img/flores_lujo_rojas.webp"}
               alt="Flor ofrendada"
+              decoding="async"
               className="w-20 sm:w-28 h-28 sm:h-40 object-contain filter drop-shadow-[0_0_35px_rgba(244,63,94,0.9)] scale-110"
             />
           ) : (

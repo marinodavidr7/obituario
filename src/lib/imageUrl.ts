@@ -49,9 +49,10 @@ export function esGoogleDriveUrl(url?: string | null): boolean {
  * Normaliza cualquier URL de imagen para que pueda renderizarse directamente en un <img>.
  * Convierte enlaces compartidos de Google Drive a su CDN directo (lh3.googleusercontent.com/d/{id}),
  * y enlaces de Dropbox a modo raw=1. Cualquier otra URL se devuelve sin tocar.
+ * Si se indica `ancho`, Google Drive devuelve una versión redimensionada (menos KB).
  * Acepta null/undefined/vacías (devuelve "").
  */
-export function normalizarUrlImagen(url?: string | null): string {
+export function normalizarUrlImagen(url?: string | null, ancho?: number): string {
   if (!url || typeof url !== "string") return "";
   const trimmed = url.trim();
   if (!trimmed) return "";
@@ -60,7 +61,8 @@ export function normalizarUrlImagen(url?: string | null): string {
   if (esGoogleDriveUrl(trimmed)) {
     const driveId = extraerGoogleDriveId(trimmed);
     if (driveId) {
-      return `https://lh3.googleusercontent.com/d/${driveId}`;
+      const sufijo = ancho && ancho > 0 ? `=w${Math.round(ancho)}` : "";
+      return `https://lh3.googleusercontent.com/d/${driveId}${sufijo}`;
     }
   }
 

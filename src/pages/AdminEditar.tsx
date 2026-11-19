@@ -23,6 +23,7 @@ import {
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import { editarPersona } from "@/lib/actions";
 import { navigate } from "@/lib/router";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
 import type { Persona } from "@/types";
 
 export default function AdminEditar({ id }: { id: string }) {
@@ -34,6 +35,7 @@ export default function AdminEditar({ id }: { id: string }) {
   const [, setTick] = useState(0);
   const [vinculoPersonaId, setVinculoPersonaId] = useState("");
   const [vinculoBusqueda, setVinculoBusqueda] = useState("");
+  const vinculoBusquedaDebounced = useDebouncedValue(vinculoBusqueda, 180);
   const [vinculoDropdownAbierto, setVinculoDropdownAbierto] = useState(false);
   const [vinculoRelacion, setVinculoRelacion] = useState("Esposo/a");
   const [guardandoVinculo, setGuardandoVinculo] = useState(false);
@@ -186,8 +188,10 @@ export default function AdminEditar({ id }: { id: string }) {
                   className="rounded-xl overflow-hidden border border-white/10 bg-stone-950/70 flex flex-col"
                 >
                   <img
-                    src={normalizarUrlImagen(f.url)}
+                    src={normalizarUrlImagen(f.url, 480)}
                     alt={`Foto enviada por ${f.remitente}`}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-44 object-cover"
                   />
                   <div className="p-3 space-y-2.5 flex-1 flex flex-col justify-between">
@@ -328,14 +332,16 @@ export default function AdminEditar({ id }: { id: string }) {
                 {vinculoDropdownAbierto && (
                   <div className="absolute left-0 right-0 mt-1 max-h-52 overflow-y-auto rounded-xl border border-gold/30 bg-[#0d1117] shadow-2xl z-30 divide-y divide-white/5">
                     {(() => {
-                      const q = vinculoBusqueda.trim().toLowerCase();
-                      const filtradas = candidatas.filter(
-                        (c) =>
-                          !q ||
-                          c.nombre.toLowerCase().includes(q) ||
-                          (c.apodo && c.apodo.toLowerCase().includes(q)) ||
-                          c.anios.toLowerCase().includes(q)
-                      );
+                      const q = vinculoBusquedaDebounced.trim().toLowerCase();
+                      const filtradas = candidatas
+                        .filter(
+                          (c) =>
+                            !q ||
+                            c.nombre.toLowerCase().includes(q) ||
+                            (c.apodo && c.apodo.toLowerCase().includes(q)) ||
+                            c.anios.toLowerCase().includes(q)
+                        )
+                        .slice(0, 40);
                       if (filtradas.length === 0) {
                         return (
                           <div className="px-3 py-2.5 text-xs text-stone-500 italic">

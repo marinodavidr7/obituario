@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export const ESCUDO_POLICIA_LOCAL = "/img/escudo-policia-rd.png";
+export const ESCUDO_POLICIA_LOCAL = "/img/escudo-policia-rd.webp";
 export const ESCUDO_POLICIA_URL =
   "https://www.policianacional.gob.do/wp-content/uploads/2026/05/logo_policia_rd_2026.png";
 

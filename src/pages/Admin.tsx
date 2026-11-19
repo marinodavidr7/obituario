@@ -423,9 +423,11 @@ export default function Admin() {
                   <div className="w-14 h-14 rounded-full border border-gold/40 bg-stone-950 overflow-hidden shrink-0">
                     {p.foto ? (
                       <img
-                        src={normalizarUrlImagen(p.foto)}
+                        src={normalizarUrlImagen(p.foto, 96)}
                         alt=""
                         style={{ objectPosition: p.foto_pos || "50% 20%" }}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     ) : (
@@ -526,8 +528,10 @@ export default function Admin() {
                 className="rounded-xl overflow-hidden border border-white/10 bg-stone-950/80 flex flex-col"
               >
                 <img
-                  src={normalizarUrlImagen(f.url)}
+                  src={normalizarUrlImagen(f.url, 480)}
                   alt={`Foto para ${f.persona_nombre}`}
+                  loading="lazy"
+                  decoding="async"
                   className="w-full h-48 object-cover"
                 />
                 <div className="p-3.5 space-y-3 flex-1 flex flex-col justify-between">

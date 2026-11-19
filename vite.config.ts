@@ -44,7 +44,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        globPatterns: ["**/*.{js,css,html,ico,png,jpg,svg,woff,woff2,webmanifest}"],
+        globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,svg,webp,avif,woff,woff2,webmanifest}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -79,7 +79,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/i,
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp|avif)$/i,
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "images-cache",

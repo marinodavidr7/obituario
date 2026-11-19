@@ -20,7 +20,7 @@ export default function PersonaCard({ p }: { p: Persona }) {
         {p.foto ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={normalizarUrlImagen(p.foto)}
+            src={normalizarUrlImagen(p.foto, 360)}
             alt={p.nombre}
             className="portrait-inner object-cover w-full h-full"
             style={{ objectPosition: p.foto_pos || "50% 20%" }}

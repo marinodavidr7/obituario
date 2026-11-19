@@ -6,6 +6,19 @@ import { normalizarUrlImagen } from "@/lib/imageUrl";
 import { iniciales } from "@/lib/utils";
 import { triggerHaptic } from "@/lib/haptics";
 import { listFamilias, listPersonas } from "@/lib/db";
+import { useDebouncedValue } from "@/lib/useDebouncedValue";
+import { Skeleton } from "@/components/Skeleton";
+
+const MAX_PERSONAS = 12;
+const MAX_FAMILIAS = 6;
+
+/** Minúsculas y sin acentos: "José" y "jose" encuentran lo mismo. */
+function normalizarTexto(valor: string): string {
+  return (valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
 
 type ResultadoPersona = {
   id: string;
@@ -27,12 +40,14 @@ type ResultadoFamilia = {
 
 export default function Buscador() {
   const [query, setQuery] = useState("");
+  const queryDebounced = useDebouncedValue(query, 220);
   const [abiertoDesktop, setAbiertoDesktop] = useState(false);
   const [modalMovilAbierto, setModalMovilAbierto] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [personas, setPersonas] = useState<ResultadoPersona[]>([]);
   const [familias, setFamilias] = useState<ResultadoFamilia[]>([]);
-  const [cargando, setCargando] = useState(false);
+  const [totalPersonas, setTotalPersonas] = useState(0);
+  const [totalFamilias, setTotalFamilias] = useState(0);
 
   const contenedorDesktopRef = useRef<HTMLDivElement>(null);
   const inputMovilRef = useRef<HTMLInputElement>(null);
@@ -65,45 +80,51 @@ export default function Buscador() {
     };
   }, [modalMovilAbierto]);
 
-  // Búsqueda inteligente ultra rápida offline y online
+  // Limpiar resultados al vaciar el campo sin esperar al debounce.
   useEffect(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) {
+    if (!query.trim()) {
       setPersonas([]);
       setFamilias([]);
+      setTotalPersonas(0);
+      setTotalFamilias(0);
       setAbiertoDesktop(false);
-      return;
     }
-
-    setCargando(true);
-    const timer = setTimeout(() => {
-      try {
-        const allP = listPersonas();
-        const allF = listFamilias();
-
-        const matchP = allP.filter(
-          (p) =>
-            p.nombre.toLowerCase().includes(q) ||
-            (p.apodo && p.apodo.toLowerCase().includes(q)) ||
-            (p.epitafio && p.epitafio.toLowerCase().includes(q))
-        );
-
-        const matchF = allF.filter(
-          (f) =>
-            f.apellido.toLowerCase().includes(q) ||
-            (f.lema && f.lema.toLowerCase().includes(q))
-        );
-
-        setPersonas(matchP);
-        setFamilias(matchF);
-        setAbiertoDesktop(true);
-      } finally {
-        setCargando(false);
-      }
-    }, 60);
-
-    return () => clearTimeout(timer);
   }, [query]);
+
+  // Búsqueda diferida (220 ms) para no recorrer el obituario en cada tecla.
+  useEffect(() => {
+    const q = normalizarTexto(queryDebounced.trim());
+    if (!q) return;
+
+    try {
+      const allP = listPersonas();
+      const allF = listFamilias();
+
+      const matchP = allP.filter((p) => {
+        const nombre = normalizarTexto(p.nombre);
+        const apodo = normalizarTexto(p.apodo || "");
+        const epitafio = normalizarTexto(p.epitafio || "");
+        return nombre.includes(q) || apodo.includes(q) || epitafio.includes(q);
+      });
+
+      const matchF = allF.filter((f) => {
+        const apellido = normalizarTexto(f.apellido);
+        const lema = normalizarTexto(f.lema || "");
+        return apellido.includes(q) || lema.includes(q);
+      });
+
+      setPersonas(matchP.slice(0, MAX_PERSONAS));
+      setFamilias(matchF.slice(0, MAX_FAMILIAS));
+      setTotalPersonas(matchP.length);
+      setTotalFamilias(matchF.length);
+      setAbiertoDesktop(true);
+    } catch {
+      setPersonas([]);
+      setFamilias([]);
+      setTotalPersonas(0);
+      setTotalFamilias(0);
+    }
+  }, [queryDebounced]);
 
   // Cerrar dropdown desktop al hacer clic fuera
   useEffect(() => {
@@ -115,6 +136,9 @@ export default function Buscador() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Mientras el usuario escribe y el debounce aún no dispara, mostramos el aviso.
+  const buscando = query.trim() !== "" && query !== queryDebounced;
 
   const cerrarModalMovil = () => {
     triggerHaptic("light");
@@ -192,20 +216,28 @@ export default function Buscador() {
         {/* Dropdown flotante en escritorio */}
         {abiertoDesktop && (
           <div className="absolute top-full mt-2 left-0 right-0 z-50 bg-[#0d1015]/95 backdrop-blur-xl border border-gold/30 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.9),0_0_30px_rgba(201,168,106,0.1)] overflow-hidden max-h-[75vh] overflow-y-auto animate-in fade-in duration-200">
-            {cargando && (
-              <div className="p-4 text-center text-xs text-stone-400 font-light">
-                Buscando en la memoria del obituario...
+            {buscando && (
+              <div className="p-3 space-y-2.5" aria-hidden="true">
+                {[0, 1, 2].map((i) => (
+                  <div key={i} className="flex items-center gap-3 px-1">
+                    <Skeleton className="w-9 h-9 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-1.5">
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-2.5 w-1/3" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
-            {!cargando && personas.length === 0 && familias.length === 0 && (
+            {!buscando && personas.length === 0 && familias.length === 0 && (
               <div className="p-5 text-center text-xs text-stone-400 font-serif italic">
                 No se encontraron registros para &ldquo;{query}&rdquo;
               </div>
             )}
 
             {/* Familias */}
-            {familias.length > 0 && (
+            {!buscando && familias.length > 0 && (
               <div className="p-2 border-b border-white/5">
                 <span className="text-[10px] uppercase tracking-[0.22em] text-gold/80 px-3 py-1 block">
                   Familias
@@ -236,7 +268,7 @@ export default function Buscador() {
             )}
 
             {/* Personas */}
-            {personas.length > 0 && (
+            {!buscando && personas.length > 0 && (
               <div className="p-2">
                 <span className="text-[10px] uppercase tracking-[0.22em] text-gold/80 px-3 py-1 block">
                   Seres Queridos
@@ -252,9 +284,11 @@ export default function Buscador() {
                       {p.foto ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={normalizarUrlImagen(p.foto)}
+                          src={normalizarUrlImagen(p.foto, 96)}
                           alt=""
                           style={{ objectPosition: p.foto_pos || "50% 20%" }}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0"
                         />
                       ) : (
@@ -277,6 +311,12 @@ export default function Buscador() {
                   </Link>
                 ))}
               </div>
+            )}
+
+            {!buscando && (totalPersonas > personas.length || totalFamilias > familias.length) && (
+              <p className="px-3 py-2 text-[11px] text-stone-500 border-t border-white/5">
+                Hay más coincidencias. Escribe un poco más para afinarlas.
+              </p>
             )}
           </div>
         )}
@@ -331,14 +371,21 @@ export default function Buscador() {
 
           {/* Contenido / Resultados en móvil */}
           <div className="flex-1 overflow-y-auto px-4 py-3 divide-y divide-white/5 overscroll-contain">
-            {cargando && (
-              <div className="py-12 text-center text-sm text-stone-400 font-light">
-                <span className="inline-block animate-spin text-gold mr-2">✦</span>
-                Buscando en la memoria del obituario...
+            {buscando && (
+              <div className="py-3 space-y-3" aria-hidden="true">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3.5 p-3">
+                    <Skeleton className="w-12 h-12 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
-            {!cargando && query && personas.length === 0 && familias.length === 0 && (
+            {!buscando && query && personas.length === 0 && familias.length === 0 && (
               <div className="py-16 text-center">
                 <span className="text-2xl text-gold/60 block mb-2">✦</span>
                 <p className="font-serif italic text-stone-400 text-base">
@@ -359,7 +406,7 @@ export default function Buscador() {
             )}
 
             {/* Resultados de Familias en Móvil */}
-            {familias.length > 0 && (
+            {!buscando && familias.length > 0 && (
               <div className="py-2">
                 <span className="text-[10px] uppercase tracking-[0.22em] text-gold/80 px-2 py-1 block">
                   Familias
@@ -390,7 +437,7 @@ export default function Buscador() {
             )}
 
             {/* Resultados de Personas en Móvil */}
-            {personas.length > 0 && (
+            {!buscando && personas.length > 0 && (
               <div className="py-2">
                 <span className="text-[10px] uppercase tracking-[0.22em] text-gold/80 px-2 py-1 block">
                   Seres Queridos
@@ -406,9 +453,11 @@ export default function Buscador() {
                       {p.foto ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={normalizarUrlImagen(p.foto)}
+                          src={normalizarUrlImagen(p.foto, 128)}
                           alt=""
                           style={{ objectPosition: p.foto_pos || "50% 20%" }}
+                          loading="lazy"
+                          decoding="async"
                           className="w-full h-full object-cover grayscale-[20%]"
                         />
                       ) : (
@@ -431,6 +480,12 @@ export default function Buscador() {
                   </Link>
                 ))}
               </div>
+            )}
+
+            {!buscando && (totalPersonas > personas.length || totalFamilias > familias.length) && (
+              <p className="px-2 py-3 text-xs text-stone-500">
+                Hay más coincidencias. Escribe un poco más para afinarlas.
+              </p>
             )}
           </div>
         </div>,

@@ -13,9 +13,30 @@ const LLAMA_SVG = (
   </svg>
 );
 
+// Paginación progresiva en cliente: pinta lo justo y carga el resto bajo demanda.
+const PAGE_FAMILIAS = 12;
+const PAGE_PERSONAS = 24;
+const PREVIEW_ALMAS = 8;
+
 function extraerAnio(str: string): number {
   const m = (str || "").match(/\d{4}/);
   return m ? parseInt(m[0], 10) : 9999;
+}
+
+function BotonVerMas({ restantes, onClick }: { restantes: number; onClick: () => void }) {
+  if (restantes <= 0) return null;
+  return (
+    <div className="flex justify-center mt-6 sm:mt-8">
+      <button
+        type="button"
+        onClick={onClick}
+        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-gold/35 bg-stone-900/80 hover:bg-gold/15 text-gold-soft text-xs uppercase tracking-[0.16em] transition-colors active:scale-95"
+      >
+        Mostrar más
+        <span className="text-stone-500 normal-case tracking-normal">({restantes})</span>
+      </button>
+    </div>
+  );
 }
 
 export default function PanteonTabsView({
@@ -27,7 +48,23 @@ export default function PanteonTabsView({
 }) {
   const [tab, setTab] = useState<"apellidos" | "todos" | "cronologia">("apellidos");
   const [criterioOrden, setCriterioOrden] = useState<"antiguos" | "recientes" | "alfabetico" | "velas">("antiguos");
+  const [visiblesFamilias, setVisiblesFamilias] = useState(PAGE_FAMILIAS);
+  const [visiblesPersonas, setVisiblesPersonas] = useState(PAGE_PERSONAS);
+  const [visiblesCronologia, setVisiblesCronologia] = useState(PAGE_PERSONAS);
   const tabsContainerRef = useRef<HTMLDivElement>(null);
+
+  // Al cambiar de listado u orden volvemos a la primera página visible.
+  useEffect(() => {
+    setVisiblesFamilias(PAGE_FAMILIAS);
+  }, [familias.length]);
+
+  useEffect(() => {
+    setVisiblesPersonas(PAGE_PERSONAS);
+  }, [todasLasPersonas.length, criterioOrden]);
+
+  useEffect(() => {
+    setVisiblesCronologia(PAGE_PERSONAS);
+  }, [todasLasPersonas.length]);
 
   // Escuchar el evento de cambio rápido de pestaña desde la barra inferior móvil y hash #almas
   useEffect(() => {
@@ -68,6 +105,23 @@ export default function PanteonTabsView({
   const cronologia = useMemo(() => {
     return [...todasLasPersonas].sort((a, b) => extraerAnio(a.anios) - extraerAnio(b.anios));
   }, [todasLasPersonas]);
+
+  const familiasVisibles = useMemo(
+    () => familias.slice(0, visiblesFamilias),
+    [familias, visiblesFamilias]
+  );
+  const personasVisibles = useMemo(
+    () => personasOrdenadas.slice(0, visiblesPersonas),
+    [personasOrdenadas, visiblesPersonas]
+  );
+  const cronologiaVisible = useMemo(
+    () => cronologia.slice(0, visiblesCronologia),
+    [cronologia, visiblesCronologia]
+  );
+  const previewPersonas = useMemo(
+    () => todasLasPersonas.slice(0, PREVIEW_ALMAS),
+    [todasLasPersonas]
+  );
 
   return (
     <div ref={tabsContainerRef} id="almas" className="scroll-mt-20">
@@ -175,7 +229,7 @@ export default function PanteonTabsView({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-3 sm:gap-7">
-            {familias.map((f) => (
+            {familiasVisibles.map((f) => (
               <Link
                 key={f.id}
                 href={`/familia/${f.id}`}
@@ -206,7 +260,13 @@ export default function PanteonTabsView({
                         className="w-6 h-6 sm:w-8 sm:h-8 rounded-full border-2 border-stone-900 overflow-hidden bg-stone-950 shadow-md"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={normalizarUrlImagen(src)} alt="" className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition duration-300" />
+                        <img
+                          src={normalizarUrlImagen(src, 96)}
+                          alt=""
+                          loading="lazy"
+                          decoding="async"
+                          className="w-full h-full object-cover grayscale-[30%] group-hover:grayscale-0 transition duration-300"
+                        />
                       </div>
                     ))}
                   </div>
@@ -232,6 +292,11 @@ export default function PanteonTabsView({
               </Link>
             ))}
           </div>
+
+          <BotonVerMas
+            restantes={familias.length - familiasVisibles.length}
+            onClick={() => setVisiblesFamilias((v) => v + PAGE_FAMILIAS)}
+          />
 
           {familias.length === 0 && (
             <div className="text-center py-10 px-4 rounded-2xl border border-white/5 bg-stone-900/30 my-4">
@@ -278,7 +343,7 @@ export default function PanteonTabsView({
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-7">
-                {todasLasPersonas.map((p) => (
+                {previewPersonas.map((p) => (
                   <PersonaCard key={p.id} p={p} />
                 ))}
               </div>
@@ -313,10 +378,15 @@ export default function PanteonTabsView({
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-7">
-            {personasOrdenadas.map((p) => (
+            {personasVisibles.map((p) => (
               <PersonaCard key={p.id} p={p} />
             ))}
           </div>
+
+          <BotonVerMas
+            restantes={personasOrdenadas.length - personasVisibles.length}
+            onClick={() => setVisiblesPersonas((v) => v + PAGE_PERSONAS)}
+          />
         </div>
       )}
 
@@ -329,7 +399,7 @@ export default function PanteonTabsView({
           </div>
 
           <div className="relative border-l border-gold/30 ml-3 sm:ml-8 pl-5 sm:pl-8 space-y-5 sm:space-y-8">
-            {cronologia.map((p) => {
+            {cronologiaVisible.map((p) => {
               const anio = extraerAnio(p.anios);
               return (
                 <div key={p.id} className="relative group">
@@ -356,6 +426,11 @@ export default function PanteonTabsView({
               );
             })}
           </div>
+
+          <BotonVerMas
+            restantes={cronologia.length - cronologiaVisible.length}
+            onClick={() => setVisiblesCronologia((v) => v + PAGE_PERSONAS)}
+          />
         </div>
       )}
     </div>

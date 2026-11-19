@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { triggerHaptic } from "@/lib/haptics";
+import { normalizarUrlImagen } from "@/lib/imageUrl";
 import { normalizarGaleria } from "@/lib/galeria";
 import type { GaleriaItem } from "@/types";
 
@@ -93,6 +94,7 @@ export default function Gallery({ fotos: fotosProp, nombre }: { fotos: GaleriaIt
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 2xl:grid-cols-8 gap-2.5 sm:gap-3.5">
         {fotos.map((item, i) => {
           const src = item.url;
+          const thumbSrc = normalizarUrlImagen(src, 480);
           const comentario = item.comentario;
           const isGif = /\.gif(\?|$)/i.test(src) || src.toLowerCase().includes(".gif");
           const isVideoClip = /\.(mp4|webm|mov)(\?|$)/i.test(src);
@@ -134,7 +136,7 @@ export default function Gallery({ fotos: fotosProp, nombre }: { fotos: GaleriaIt
               ) : (
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img
-                  src={src}
+                  src={thumbSrc}
                   alt={`Recuerdo de ${nombre} ${i + 1}`}
                   loading={isGif ? "eager" : "lazy"}
                   decoding={isGif ? "sync" : "async"}
@@ -217,7 +219,7 @@ export default function Gallery({ fotos: fotosProp, nombre }: { fotos: GaleriaIt
               )}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={fotos[open].url}
+                src={normalizarUrlImagen(fotos[open].url)}
                 alt={fotos[open].comentario ?? `Fotografía de ${nombre}`}
                 onLoad={() => markLoaded(fotos[open].url)}
                 className="max-w-[94vw] max-h-[78vh] sm:max-h-[82vh] rounded-xl shadow-2xl object-contain border border-white/15"

@@ -15,7 +15,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Precarga del primer fotograma de la puerta en teléfonos -->
-    <link rel="preload" as="image" href="/gif/opendoor/frame_001.jpg" media="(max-width: 768px)" />
+    <link rel="preload" as="image" href="/gif/opendoor/frame_001.webp" media="(max-width: 768px)" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -67,7 +67,7 @@
   <body class="selection:bg-gold/30 selection:text-gold-soft font-sans antialiased min-h-[100dvh]">
     <div id="root"></div>
     <div id="boot">
-      <img class="boot-frame" src="/gif/opendoor/frame_001.jpg" alt="" draggable="false" fetchpriority="high" />
+      <img class="boot-frame" src="/gif/opendoor/frame_001.webp" alt="" draggable="false" fetchpriority="high" />
       <span>✦ Entrando al Santuario Familiar…</span>
     </div>
     <script>
@@ -84,16 +84,16 @@
         }
 
         var FRAMES = [
-          "/gif/opendoor/frame_001.jpg",
-          "/gif/opendoor/frame_002.jpg",
-          "/gif/opendoor/frame_003.jpg",
-          "/gif/opendoor/frame_004.jpg",
-          "/gif/opendoor/frame_005.jpg",
-          "/gif/opendoor/frame_006.jpg",
-          "/gif/opendoor/frame_007.jpg",
-          "/gif/opendoor/frame_008.jpg",
-          "/gif/opendoor/frame_009.jpg",
-          "/gif/opendoor/frame_010.jpg"
+          "/gif/opendoor/frame_001.webp",
+          "/gif/opendoor/frame_002.webp",
+          "/gif/opendoor/frame_003.webp",
+          "/gif/opendoor/frame_004.webp",
+          "/gif/opendoor/frame_005.webp",
+          "/gif/opendoor/frame_006.webp",
+          "/gif/opendoor/frame_007.webp",
+          "/gif/opendoor/frame_008.webp",
+          "/gif/opendoor/frame_009.webp",
+          "/gif/opendoor/frame_010.webp"
         ];
         var FRAME_MS = 120;
         var MAX = 6000;

@@ -9,6 +9,7 @@ import EscudoPolicia from "@/components/EscudoPolicia";
 import Gallery from "@/components/Gallery";
 import SubirFotoFamiliar from "@/components/SubirFotoFamiliar";
 import Videos from "@/components/Videos";
+import { PersonaViewSkeleton } from "@/components/Skeleton";
 import PersonaAudioWatcher from "@/components/PersonaAudioWatcher";
 import ConfirmModal from "@/components/ConfirmModal";
 import { useToast } from "@/components/toast";
@@ -210,13 +211,7 @@ export default function PersonaView({ id }: { id: string }) {
   }, [id]);
 
   if (cargando && !persona) {
-    return (
-      <div className="py-28 text-center flex flex-col items-center justify-center fade-enter">
-        <div className="w-10 h-10 rounded-full border-2 border-gold/20 border-t-gold animate-spin mb-4" />
-        <p className="font-serif text-lg text-stone-300">Accediendo al santuario memorial...</p>
-        <p className="text-xs text-stone-500 mt-1 font-light">Cargando memorias y ofrendas</p>
-      </div>
-    );
+    return <PersonaViewSkeleton />;
   }
 
   if (!persona) {
@@ -365,10 +360,11 @@ export default function PersonaView({ id }: { id: string }) {
                 >
                   {p.foto ? (
                     <img
-                      src={normalizarUrlImagen(p.foto)}
+                      src={normalizarUrlImagen(p.foto, 900)}
                       alt={`Retrato de ${p.nombre}`}
                       style={{ objectPosition: p.foto_pos || "50% 20%" }}
                       loading="eager"
+                      fetchPriority="high"
                       decoding="async"
                       className={`w-full h-full object-cover ${
                         policial.es_policia || p.foto.toLowerCase().includes(".gif") ? "" : "grayscale-[20%]"
@@ -624,7 +620,7 @@ export default function PersonaView({ id }: { id: string }) {
                       <div className="w-10 h-10 rounded-full overflow-hidden border border-gold/30 bg-stone-950 shrink-0 grid place-items-center text-xs font-serif text-gold">
                         {v.persona.foto ? (
                           <img
-                            src={normalizarUrlImagen(v.persona.foto)}
+                            src={normalizarUrlImagen(v.persona.foto, 96)}
                             alt={v.persona.nombre}
                             style={{ objectPosition: v.persona.foto_pos || "50% 20%" }}
                             className="w-full h-full object-cover"
