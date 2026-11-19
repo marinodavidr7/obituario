@@ -42,8 +42,6 @@ if (import.meta.env.PROD && typeof window !== "undefined" && "serviceWorker" in 
 }
 
 const container = document.getElementById("root");
-const boot = document.getElementById("boot");
-if (boot) boot.remove();
 
 if (container) {
   createRoot(container).render(

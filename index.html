@@ -14,6 +14,8 @@
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Precarga del primer fotograma de la puerta en teléfonos -->
+    <link rel="preload" as="image" href="/gif/opendoor/frame_001.jpg" media="(max-width: 768px)" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,7 +25,29 @@
     <style>
       html, body, #root { height: 100%; }
       body { margin: 0; background: #050709; color: #f2efe9; }
-      #boot { position: fixed; inset: 0; display: grid; place-items: center; color: #c9a86a; font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; letter-spacing: 0.1em; }
+      #boot {
+        position: fixed; inset: 0; z-index: 9999;
+        display: grid; place-items: center;
+        background: #050709;
+        color: #c9a86a;
+        font-family: 'Cormorant Garamond', serif;
+        font-size: 1.5rem; letter-spacing: 0.1em;
+        overscroll-behavior: none;
+        touch-action: none;
+      }
+      #boot .boot-frame {
+        display: none;
+        width: 100%; height: 100%;
+        object-fit: cover;
+        user-select: none;
+        pointer-events: none;
+      }
+      @media (max-width: 768px) {
+        /* En teléfonos la entrada la protagonizan los fotogramas de la puerta. */
+        #boot { background: #010308; font-size: 0; }
+        #boot > span { display: none; }
+        #boot .boot-frame { display: block; }
+      }
       .arch-card {
         border-radius: 9999px 9999px 18px 18px !important;
         position: relative;
@@ -41,9 +65,111 @@
     </script>
   </head>
   <body class="selection:bg-gold/30 selection:text-gold-soft font-sans antialiased min-h-[100dvh]">
-    <div id="root">
-      <div id="boot">✦ Entrando al Santuario Familiar…</div>
+    <div id="root"></div>
+    <div id="boot">
+      <img class="boot-frame" src="/gif/opendoor/frame_001.jpg" alt="" draggable="false" fetchpriority="high" />
+      <span>✦ Entrando al Santuario Familiar…</span>
     </div>
+    <script>
+      // Splash de entrada de la puerta con fotogramas: sólo en teléfonos.
+      // Se muestra la puerta cerrada, se precargan los 10 fotogramas y se
+      // reproducen al estar listos; luego se desvanece y deja ver la app.
+      (function () {
+        var boot = document.getElementById("boot");
+        if (!boot) return;
+        var esMovil = window.matchMedia("(max-width: 768px)").matches;
+        if (!esMovil) {
+          boot.parentNode.removeChild(boot);
+          return;
+        }
+
+        var FRAMES = [
+          "/gif/opendoor/frame_001.jpg",
+          "/gif/opendoor/frame_002.jpg",
+          "/gif/opendoor/frame_003.jpg",
+          "/gif/opendoor/frame_004.jpg",
+          "/gif/opendoor/frame_005.jpg",
+          "/gif/opendoor/frame_006.jpg",
+          "/gif/opendoor/frame_007.jpg",
+          "/gif/opendoor/frame_008.jpg",
+          "/gif/opendoor/frame_009.jpg",
+          "/gif/opendoor/frame_010.jpg"
+        ];
+        var FRAME_MS = 120;
+        var MAX = 6000;
+        var img = boot.querySelector(".boot-frame");
+        var overflowAnterior = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+
+        var cerrado = false;
+        var paginaLista = document.readyState === "complete";
+        var animacionTerminada = false;
+        var arrancada = false;
+
+        function cerrar() {
+          if (cerrado) return;
+          cerrado = true;
+          boot.style.transition = "opacity 450ms ease-out";
+          boot.style.opacity = "0";
+          document.body.style.overflow = overflowAnterior;
+          window.setTimeout(function () {
+            if (boot.parentNode) boot.parentNode.removeChild(boot);
+          }, 450);
+        }
+
+        function intentarCerrar() {
+          if (paginaLista && animacionTerminada) cerrar();
+        }
+
+        function iniciarAnimacion() {
+          if (arrancada) return;
+          arrancada = true;
+          if (!img) {
+            animacionTerminada = true;
+            intentarCerrar();
+            return;
+          }
+          var i = 0;
+          var timer = window.setInterval(function () {
+            i += 1;
+            if (i >= FRAMES.length) {
+              window.clearInterval(timer);
+              animacionTerminada = true;
+              intentarCerrar();
+              return;
+            }
+            img.src = FRAMES[i];
+          }, FRAME_MS);
+        }
+
+        // Precargar todos los fotogramas; al estar listos, abrir la puerta.
+        var listas = 0;
+        for (var i = 0; i < FRAMES.length; i++) {
+          var pre = new Image();
+          pre.onload = function () {
+            listas += 1;
+            if (listas >= FRAMES.length) iniciarAnimacion();
+          };
+          pre.onerror = function () {
+            listas += 1;
+            if (listas >= FRAMES.length) iniciarAnimacion();
+          };
+          pre.src = FRAMES[i];
+        }
+
+        // Red muy lenta: no bloquear la entrada esperando fotogramas eternamente.
+        window.setTimeout(iniciarAnimacion, 2500);
+
+        if (!paginaLista) {
+          window.addEventListener("load", function () {
+            paginaLista = true;
+            intentarCerrar();
+          });
+        }
+
+        window.setTimeout(cerrar, MAX);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
